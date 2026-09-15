@@ -39,7 +39,7 @@ type AttackAnalysis struct {
 	BaseDamage  float64
 	LureDamage  float64
 	ComboDamage float64
-	FinalAcc    int
+	FinalAcc    float64
 }
 
 // tgtDEF integers for acc calcs
@@ -79,6 +79,11 @@ const (
 
 const TRAPSTUN int = 50
 
+// Above 95 raw accuracy, additional accuracy has diminishing returns rather
+// than being hard-capped at 95: Accuracy = (RawAcc - 95) * 0.04 + 95
+const AccuracyDiminishingReturnsThreshold int = 95
+const AccuracyDiminishingReturnsFactor float64 = 0.04
+
 var gagOrder = map[string]int{
 	"Toon-Up": 0,
 	"Trap":    1,
@@ -101,13 +106,6 @@ var lureGagTiers = map[string]int{
 }
 
 // Helpers
-func clampMax(x int, max int) int {
-	if x > max {
-		return max
-	}
-	return x
-}
-
 func filter[T any](ss []T, test func(T) bool) (ret []T) {
 	for _, s := range ss {
 		if test(s) {
@@ -117,12 +115,20 @@ func filter[T any](ss []T, test func(T) bool) (ret []T) {
 	return
 }
 
+func applyAccuracyDiminishingReturns(rawAcc int) float64 {
+	if rawAcc <= AccuracyDiminishingReturnsThreshold {
+		return float64(rawAcc)
+	}
+	scaled := float64(rawAcc-AccuracyDiminishingReturnsThreshold)*AccuracyDiminishingReturnsFactor + float64(AccuracyDiminishingReturnsThreshold)
+	return math.Round(scaled*10) / 10
+}
+
 func applyStatusAffects(atk *AttackAnalysis, cog Cog) {
 	for _, cheat := range cog.Cheats {
 		switch cheat {
 		// General
 		case AccuracyUp:
-			atk.FinalAcc = clampMax(atk.FinalAcc+75, 95)
+			atk.FinalAcc = applyAccuracyDiminishingReturns(int(atk.FinalAcc) + 75)
 		// Field Office
 		case FiredUp:
 			multiplyAllDamages(atk, 1.5)
@@ -177,7 +183,7 @@ func IntoCalculateDamage(isLured bool, trackEXP int, attacks []AttackAnalysis, c
 		return gagOrder[attacks[i].Gag.GagType] < gagOrder[attacks[j].Gag.GagType]
 	})
 
-	CalculateDamageRec(&attacks, 0, 0, isLured, trackEXP, tgtDEF, cog)
+	CalculateDamageRec(&attacks, 0, 0, isLured, trackEXP, tgtDEF, cog, make(map[string]bool))
 
 	return attacks
 }
@@ -190,6 +196,7 @@ func CalculateDamageRec(
 	trackEXP int,
 	tgtDEF int,
 	cog Cog,
+	seenTracks map[string]bool,
 ) {
 	// Base case
 	if i >= len(*attacks) {
@@ -207,15 +214,36 @@ func CalculateDamageRec(
 
 	a := &(*attacks)[i]
 
+	stun = 0
+	trapLureComboIndex := -1
+	for k := 0; k < len(*attacks)-1; k++ {
+		if (*attacks)[k].Gag.GagType == "Trap" && (*attacks)[k+1].Gag.GagType == "Lure" {
+			trapLureComboIndex = k + 1
+			break
+		}
+	}
+
 	// Calc accuracy
-	var gagAcc int
+	var gagAcc float64
 	switch {
 	case isLured && a.Gag.GagType == "Drop":
 		gagAcc = 0
 	case isLured || a.Gag.GagType == "Trap":
 		gagAcc = 100
 	default:
-		gagAcc = clampMax(getGagAccuracy(*a, (prevGag != nil && prevGag.GagType == "Trap"))+trackEXP+tgtDEF+stun, 95)
+		stun := 0
+		for j := range i {
+			prev := (*attacks)[j].Gag
+			if prev.GagType != "Trap" && prev.GagType != "Lure" && prev.GagType != a.Gag.GagType {
+				stun += prev.Stun
+			}
+		}
+
+		if trapLureComboIndex != -1 && i > trapLureComboIndex {
+			stun += TRAPSTUN
+		}
+
+		gagAcc = applyAccuracyDiminishingReturns(getGagAccuracy(*a, (prevGag != nil && prevGag.GagType == "Trap")) + trackEXP + tgtDEF + stun)
 	}
 
 	// Calc damage
@@ -235,21 +263,7 @@ func CalculateDamageRec(
 	isLured = (a.Gag.GagType == "Lure" && (prevGag == nil || prevGag.GagType != "Trap")) ||
 		(isLured && nextGag != nil && nextGag.GagType == a.Gag.GagType)
 
-	// Change stun state
-	if prevGag == nil || prevGag.GagType != a.Gag.GagType {
-		switch a.Gag.GagType {
-		case "Lure":
-			if prevGag != nil && prevGag.GagType == "Trap" {
-				stun += TRAPSTUN
-			}
-		default:
-			if a.Gag.GagType != "Trap" {
-				stun += a.Gag.Stun
-			}
-		}
-	}
-
-	CalculateDamageRec(attacks, i+1, stun, isLured, trackEXP, tgtDEF, cog)
+	CalculateDamageRec(attacks, i+1, stun, isLured, trackEXP, tgtDEF, cog, seenTracks)
 }
 
 func groupLure(attacks []AttackAnalysis) (*AttackAnalysis, *AttackAnalysis) {

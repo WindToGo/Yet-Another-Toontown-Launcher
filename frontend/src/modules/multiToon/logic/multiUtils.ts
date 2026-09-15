@@ -1,11 +1,12 @@
 import { notifications } from "@mantine/notifications";
 import { LoadTTRControls, Mt_init, Mt_select_window, Mt_set_key_down, Mt_set_key_up, SaveMTProfile } from "../../../../bindings/YATL/services/multiservice";
 import { MTProfile, MTSession } from "./MultiToonTypes";
+import { sanitizeRecord } from "../../../utils/sanitizeRecord";
 
 let ttrKeys: Record<string, string> = {};
 
 export async function initTTRKeys(): Promise<void> {
-  ttrKeys = await LoadTTRControls();
+  ttrKeys = sanitizeRecord(await LoadTTRControls());
 }
 
 export async function newProfile(profile_name: string): Promise<MTProfile> {

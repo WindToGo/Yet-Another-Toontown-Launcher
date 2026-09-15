@@ -20,6 +20,16 @@ func (g *LoginService) SaveAccount(username string, password string) int {
 	return 0
 }
 
+func (g *LoginService) TestLoginAccount(username string, password string) bool {
+	resp, err := login.TestLoginTTRSuccess(username, password);
+
+	if err != nil {
+		return false
+	}
+
+	return resp
+}
+
 func (g *LoginService) GetAllAccounts() []string {
 	return login.GetAllAccounts()
 }

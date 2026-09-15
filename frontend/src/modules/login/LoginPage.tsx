@@ -20,7 +20,6 @@ const LoginPage: React.FC<LoginProps> = ({
 }) => {
   const [opened, { open, close }] = useDisclosure(false);
   const [pageMode, setPageMode] = useState<string>('accounts')
-
   // TODO: Add button for restart
   return (
     <>
@@ -57,7 +56,11 @@ const LoginPage: React.FC<LoginProps> = ({
         />
       </Box>
       <Divider />
-      <AccountPanel handlePlay={handlePlay} accounts={accounts} processIDs={processIDs} />
+      <AccountPanel
+        handlePlay={handlePlay}
+        accounts={accounts}
+        processIDs={processIDs}
+      />
       <FloatingButton right={"8rem"} onClick={() => {}}>
         <IconQuestionMark size="2.5rem"/>
       </FloatingButton>
@@ -68,5 +71,4 @@ const LoginPage: React.FC<LoginProps> = ({
     </>
   );
 };
-
 export default LoginPage;

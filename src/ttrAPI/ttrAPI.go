@@ -7,26 +7,26 @@ import (
 	"os"
 )
 
-type ttrApiCall string
+type TTRApiCall string
 
 const (
-	Toon      ttrApiCall = "toon.json"
-	Laff      ttrApiCall = "laff.json"
-	Location  ttrApiCall = "location.json"
-	Gags      ttrApiCall = "gags.json"
-	Tasks     ttrApiCall = "tasks.json"
-	Invasion  ttrApiCall = "invasion.json"
-	Fish      ttrApiCall = "fish.json"
-	Flowers   ttrApiCall = "flowers.json"
-	CogSuits  ttrApiCall = "cogsuits.json"
-	Golf      ttrApiCall = "golf.json"
-	Racing    ttrApiCall = "racing.json"
-	Beans     ttrApiCall = "beans.json"
-	Rewards   ttrApiCall = "rewards.json"
-	Cattlelog ttrApiCall = "cattlelog.json"
+	Toon      TTRApiCall = "toon.json"
+	Laff      TTRApiCall = "laff.json"
+	Location  TTRApiCall = "location.json"
+	Gags      TTRApiCall = "gags.json"
+	Tasks     TTRApiCall = "tasks.json"
+	Invasion  TTRApiCall = "invasion.json"
+	Fish      TTRApiCall = "fish.json"
+	Flowers   TTRApiCall = "flowers.json"
+	CogSuits  TTRApiCall = "cogsuits.json"
+	Golf      TTRApiCall = "golf.json"
+	Racing    TTRApiCall = "racing.json"
+	Beans     TTRApiCall = "beans.json"
+	Rewards   TTRApiCall = "rewards.json"
+	Cattlelog TTRApiCall = "cattlelog.json"
 )
 
-func (c ttrApiCall) isValid() bool {
+func (c TTRApiCall) isValid() bool {
 	switch c {
 	case Toon, Laff, Location, Gags, Tasks, Invasion,
 		Fish, Flowers, CogSuits, Golf, Racing, Beans,
@@ -39,7 +39,7 @@ func (c ttrApiCall) isValid() bool {
 
 // CallLocalApi calls api on instance running locally
 // Returns raw JSON
-func CallLocalApi(port int, call ttrApiCall) ([]byte, error) {
+func CallLocalApi(port int, call TTRApiCall) ([]byte, error) {
 	if !call.isValid() {
 		return nil, fmt.Errorf("Invalid TTR API Call")
 	}

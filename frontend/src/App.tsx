@@ -9,13 +9,17 @@ import {
 import { SidebarItems } from "./components/navbar/NavbarTypes.ts";
 import MultiToonPage from "./modules/multiToon/MultiToonPage.tsx";
 import Navbar from "./components/navbar/NavbarLink.tsx";
-import YATLReducer, { YATLActionType, YATLState } from "./state.ts";
+import YATLReducer, { initialYatlState, YATLActionType } from "./state.ts";
 import { MTProfile, MTSession } from "./modules/multiToon/logic/MultiToonTypes.ts";
 import { LoadAllMTProfiles, Mt_get_window_from_pid, Mt_init } from "../bindings/YATL/services/multiservice.ts";
 import dreamlandTheme from "./themes/DreamlandTheme.ts";
 import { initTTRKeys } from "./modules/multiToon/logic/multiUtils.ts";
 import { Events } from "@wailsio/runtime";
 import InputWindow from "./modules/multiToon/components/inputWindow.tsx";
+import CogDisguisePage from "./modules/CogSuitPage.tsx";
+import { sanitizeRecord } from "./utils/sanitizeRecord.ts";
+import { GetToonName, GetPortFromPID } from "../bindings/YATL/services/apiservice.ts";
+import FishingPage from "./modules/fishing/FishingPage.tsx";
 
 const ComingSoonPage: React.FC<{ title: string }> = ({ title }) => (
   <div>{title} Page (coming soon)</div>
@@ -26,25 +30,15 @@ const App: React.FC = () => {
     SidebarItems.Launch,
   );
 
-  const initialYatlState: YATLState = {
-    MTProfiles: [],
-    MTSessions: [],
-    accounts: [],
-    processIDs: {},
-  };
-
   const [yatlState, yatlDispatch] = useReducer(YATLReducer, initialYatlState)
-
 
   useEffect(() => {
     const fetchAccounts = async () => {
       const allAccounts = await GetAllAccounts();
       yatlDispatch({ type: YATLActionType.SET_ACCOUNTS, accounts: allAccounts });
 
-      const initialPIDs: Record<string, number> = {};
       allAccounts.forEach((acc) => {
-        initialPIDs[acc] = -1;
-        yatlDispatch({ type: YATLActionType.ADD_PID, username: acc, pid: -1, })
+        yatlDispatch({ type: YATLActionType.ADD_PID, username: acc, pid: -1 })
       });
     };
 
@@ -52,12 +46,13 @@ const App: React.FC = () => {
       const rawProfiles = await LoadAllMTProfiles();
 
       for (const [name, profile] of Object.entries(rawProfiles)) {
+        if (!profile) continue;
         yatlDispatch({
           type: YATLActionType.ADD_MT_PROFILE,
           profile: {
             name,
-            keyMap: profile.KeyMap || {},
-            autoAttatchAccounts: profile.AutoAttatchAccounts || [],
+            keyMap: sanitizeRecord(profile.KeyMap),
+            autoAttatchAccounts: profile.AutoAttatchAccounts ?? [],
           },
         });
       }
@@ -74,16 +69,12 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const removePID = (event: { data: { pid: number } }) => {
-      const pid = event.data?.[0]?.pid;
+      const pid = event.data?.pid;
       if (pid == null) return;
       yatlDispatch({ type: YATLActionType.REMOVE_PID, pid });
     };
-
-    Events.On("common:PID-killed", removePID);
-
-    return () => {
-      Events.Off("common:PID-killed");
-    };
+    const unsubscribe = Events.On("common:PID-killed", removePID);
+    return unsubscribe;
   }, []);
 
   const delay = (ms: number | undefined) => new Promise(res => setTimeout(res, ms));
@@ -111,9 +102,43 @@ const App: React.FC = () => {
     }
   };
 
+const bindToonSession = async (pid: number) => {
+  const maxAttempts = 40; // 40 * 1.5s = 60s window to accept the consent prompt and select a toon
+  const retryDelay = 1500;
+
+  try {
+    const port = await GetPortFromPID(pid);
+
+    let toonName: string | null = null;
+    let lastErr: unknown;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        toonName = await GetToonName(port);
+        break;
+      } catch (err) {
+        lastErr = err;
+        await delay(retryDelay);
+      }
+    }
+
+    if (toonName === null) {
+      throw lastErr ?? new Error("GetToonName never succeeded");
+    }
+
+    yatlDispatch({
+      type: YATLActionType.ADD_TOON_SESSION,
+      session: { port, toonName, pid },
+    });
+  } catch (err) {
+    console.error(`Failed to bind toon session for pid ${pid}:`, err);
+  }
+};
+
   const handlePlay = async (username: string) => {
-    await Login(username).then(async (pid) => {
+    await Login(username).then(async (pid: number) => {
       yatlDispatch({ type: YATLActionType.ADD_PID, pid: pid, username: username })
+      void bindToonSession(pid);
       await tryToAttatchUsers(pid, username);
     })
   };
@@ -140,9 +165,15 @@ const App: React.FC = () => {
           EditMTProfile={(profile: MTProfile) => yatlDispatch({ type: YATLActionType.EDIT_MT_PROFILE, profile: profile })}
         />;
       case SidebarItems.Suits:
-        return <ComingSoonPage title="Cog Suits" />;
+        return <CogDisguisePage
+          hasRunningInstance={true}
+          toonSessions={yatlState.toonSessions}
+        />
       case SidebarItems.Fishing:
-        return <ComingSoonPage title="Fishing Page" />;
+        return <FishingPage
+          hasRunningInstance={true}
+          toonSessions={yatlState.toonSessions}
+        />;
       case SidebarItems.ResourcePks:
         return <ComingSoonPage title="Resource Packs" />;
       case SidebarItems.Settings:

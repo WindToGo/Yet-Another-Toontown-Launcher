@@ -6,14 +6,14 @@ const AccuracyBar: React.FC<AccuracyBarProps> = ({ finalAccuracy }) => {
   return (
     <Box pb='sm'>
       <RingProgress
-        size={80}
+        size={90}
         thickness={8}
         roundCaps
         transitionDuration={250}
         sections={[{ value: finalAccuracy, color: finalAccuracy > 90 ? CatppuccinColors.Green : finalAccuracy > 70 ? CatppuccinColors.Yellow : CatppuccinColors.Red }]}
         label={
           <Text size="sm">
-            {`${finalAccuracy.toFixed(0)}%`}
+            {`${finalAccuracy.toFixed(2)}%`}
           </Text>
         }
       />

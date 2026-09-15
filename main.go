@@ -1,9 +1,9 @@
 package main
 
 import (
+	"YATL/services"
 	"YATL/src/config"
 	"YATL/src/logger"
-	"YATL/services"
 	"math/rand/v2"
 	"os"
 
@@ -45,6 +45,8 @@ func main() {
 			application.NewService(&services.LoginService{}),
 			application.NewService(&services.CalculatorService{}),
 			application.NewService(&services.MultiService{}),
+			application.NewService(&services.CogDisguiseService{}),
+			application.NewService(&services.APIService{}),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

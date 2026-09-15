@@ -1,10 +1,17 @@
 import { MTProfile, MTSession } from "./modules/multiToon//logic/MultiToonTypes";
 
+export type ToonSession = {
+  port: number;
+  toonName: string;
+  pid: number;
+};
+
 export type YATLState = {
   accounts: string[];
   MTSessions: MTSession[];
   processIDs: Record<string, number>;
   MTProfiles: MTProfile[];
+  toonSessions: ToonSession[]; // active in-game toons, port → toon name, no username tie
 }
 
 export enum YATLActionType {
@@ -12,6 +19,9 @@ export enum YATLActionType {
   ADD_ACCOUNT = "ADD_ACCOUNT",
   ADD_PID = "ADD_PID",
   REMOVE_PID = "REMOVE_PID",
+  SET_TOON_SESSIONS = "SET_TOON_SESSIONS",
+  CLEAR_TOON_SESSIONS = "CLEAR_TOON_SESSIONS",
+  ADD_TOON_SESSION = "ADD_TOON_SESSION",
   ADD_MT_SESSION = "ADD_MT_SESSION",
   REMOVE_MT_SESSION = "REMOVE_MT_SESSION",
   EDIT_MT_PROFILE = "EDIT_MT_PROFILE",
@@ -22,75 +32,86 @@ export enum YATLActionType {
 type YATLAction =
   | { type: YATLActionType.SET_ACCOUNTS; accounts: string[] }
   | { type: YATLActionType.ADD_ACCOUNT; account: string }
-  | { type: YATLActionType.ADD_PID; username: string, pid: number }
+  | { type: YATLActionType.ADD_PID; username: string; pid: number }
   | { type: YATLActionType.REMOVE_PID; pid: number }
+  | { type: YATLActionType.SET_TOON_SESSIONS; sessions: ToonSession[] }
+  | { type: YATLActionType.CLEAR_TOON_SESSIONS }
+  | { type: YATLActionType.ADD_TOON_SESSION; session: ToonSession }
   | { type: YATLActionType.ADD_MT_SESSION; session: MTSession }
   | { type: YATLActionType.REMOVE_MT_SESSION; mt_session: number }
   | { type: YATLActionType.EDIT_MT_PROFILE; profile: MTProfile }
   | { type: YATLActionType.REMOVE_MT_PROFILE; name: string }
-  | { type: YATLActionType.EDIT_MT_PROFILE; profile: MTProfile }
   | { type: YATLActionType.ADD_MT_PROFILE; profile: MTProfile }
+
+export const initialYatlState: YATLState = {
+  accounts: [],
+  MTSessions: [],
+  processIDs: {},
+  MTProfiles: [],
+  toonSessions: [],
+};
 
 export default function YATLReducer(state: YATLState, action: YATLAction): YATLState {
   switch (action.type) {
     case YATLActionType.SET_ACCOUNTS: {
-      return {
-        ...state,
-        accounts: action.accounts
-      }
+      return { ...state, accounts: action.accounts };
     }
     case YATLActionType.ADD_ACCOUNT: {
-      return {
-        ...state,
-        accounts: [...state.accounts, action.account]
-      }
+      return { ...state, accounts: [...state.accounts, action.account] };
     }
     case YATLActionType.ADD_PID: {
       return {
         ...state,
-        processIDs: {
-          ...state.processIDs,
-          [action.username]: action.pid
-        }
-      }
+        processIDs: { ...state.processIDs, [action.username]: action.pid },
+      };
     }
     case YATLActionType.REMOVE_PID: {
       if (action.pid === -1) return state;
-
-      let removedUser: string = ""
+      let removedUser = "";
       const updatedProcessIDs = { ...state.processIDs };
       for (const [username, pid] of Object.entries(updatedProcessIDs)) {
         if (pid === action.pid) {
           updatedProcessIDs[username] = -1;
-          removedUser = username
+          removedUser = username;
           break;
         }
       }
-
       const updatedMTSession = state.MTSessions.filter(
         (session) => session.attatchedUser !== removedUser
       );
-
+      const updatedToonSessions = state.toonSessions.filter(
+        (session) => session.pid !== action.pid
+      );
       return {
         ...state,
         processIDs: updatedProcessIDs,
         MTSessions: updatedMTSession,
+        toonSessions: updatedToonSessions,
       };
     }
+    case YATLActionType.ADD_TOON_SESSION: {
+      const exists = state.toonSessions.some((s) => s.port === action.session.port);
+      const updatedToonSessions = exists
+        ? state.toonSessions.map((s) =>
+          s.port === action.session.port ? action.session : s
+        )
+        : [...state.toonSessions, action.session];
+      return { ...state, toonSessions: updatedToonSessions };
+    }
+    case YATLActionType.SET_TOON_SESSIONS: {
+      return { ...state, toonSessions: action.sessions };
+    }
+    case YATLActionType.CLEAR_TOON_SESSIONS: {
+      return { ...state, toonSessions: [] };
+    }
     case YATLActionType.ADD_MT_SESSION: {
-      return {
-        ...state,
-        MTSessions: [...state.MTSessions,
-        action.session
-        ]
-      }
+      return { ...state, MTSessions: [...state.MTSessions, action.session] };
     }
     case YATLActionType.REMOVE_MT_SESSION: {
-      let newSessions = [...state.MTSessions].filter((session) => session.mt_session !== action.mt_session)
       return {
         ...state,
-        MTSessions: newSessions
-      }
+        MTSessions: state.MTSessions.filter((s) => s.mt_session !== action.mt_session),
+      };
     }
     case YATLActionType.EDIT_MT_PROFILE: {
       console.log('REDUCER EDIT_MT_PROFILE action.profile=', action.profile);
@@ -101,29 +122,20 @@ export default function YATLReducer(state: YATLState, action: YATLAction): YATLS
             ? { ...session, profile: action.profile }
             : session
         ),
-      }
+      };
     }
     case YATLActionType.ADD_MT_PROFILE: {
-      if (state.MTProfiles.some(p => p.name === action.profile.name)) {
-        return state;
-      }
-      return {
-        ...state,
-        MTProfiles: [...state.MTProfiles, action.profile]
-      };
+      if (state.MTProfiles.some(p => p.name === action.profile.name)) return state;
+      return { ...state, MTProfiles: [...state.MTProfiles, action.profile] };
     }
     case YATLActionType.REMOVE_MT_PROFILE: {
       return {
         ...state,
-        MTProfiles: state.MTProfiles.filter(
-          profile => profile.name !== action.name
-        ),
-        MTSessions: state.MTSessions.filter(
-          session => session.profile.name !== action.name
-        )
+        MTProfiles: state.MTProfiles.filter(p => p.name !== action.name),
+        MTSessions: state.MTSessions.filter(s => s.profile.name !== action.name),
       };
     }
     default:
-      return state
+      return state;
   }
 }

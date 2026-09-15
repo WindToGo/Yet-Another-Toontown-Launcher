@@ -44,6 +44,7 @@ func HandleLogin(username string) int {
 		log.Error().Err(err).Msg("Failed to get username from password")
 		return -1
 	}
+
 	resp, err := loginTTR(username, password)
 	if err != nil {
 		fmt.Println("Error Logging In: ", err)
@@ -102,11 +103,21 @@ func loginTTR(username string, password string) (*TTRResponse, error) {
 	return &ttrResp, nil
 }
 
-func handleLoginSuccess(resp *TTRResponse) int {
-	// Set necessary env
-	// os.Setenv("TTR_GAMESERVER", resp.Gameserver)
-	// os.Setenv("TTR_PLAYERCOOKIE", resp.Cookie)
+func TestLoginTTRSuccess(username string, password string) (bool, error) {
+	ttrResp, err := loginTTR(username, password)
+	if err != nil {
+		return false, err
+	}
 
+	if ttrResp.Success == "false" {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+
+func handleLoginSuccess(resp *TTRResponse) int {
 	// Prepare mirrors for download & patching
 	mirrorResp, err := http.Get(TTRMirrors)
 	if err != nil {
@@ -140,6 +151,8 @@ func handleLoginSuccess(resp *TTRResponse) int {
 	}
 
 	log.Info().Str("Patch Manifest", manifestContent).Msg("Successfully downloaded patch manifest")
+	log.Info().Str("cookie", resp.Cookie).Msg(resp.Cookie)
+	log.Info().Str("server", resp.Gameserver).Msg(resp.Gameserver)
 
 	// statusLabel.SetText("Downloading and Verifying files...")
 
@@ -152,6 +165,11 @@ func handleLoginSuccess(resp *TTRResponse) int {
 		err := patcher.DownloadAndInstallManifestFiles(mirror, []byte(manifestContent))
 		done <- err
 	}()
+
+	if err := <-done; err != nil {
+		log.Error().Err(err).Msg("Patching failed, aborting launch")
+		return -1
+	}
 
 	// Now we're ready to try and play
 	go func() {
@@ -194,7 +212,7 @@ func handleLoginSuccess(resp *TTRResponse) int {
 			} else {
 				log.Info().Msg("TTR process exited cleanly")
 			}
-			// TODO: notify app to remove PID from state if needed
+			// notify frontend to remove PID from state
 			app := application.Get()
 			app.Event.Emit("common:PID-killed", map[string]int{"pid": pid})
 			log.Info().Msg(fmt.Sprintf("PID KILLED: %d", pid))
