@@ -2,20 +2,20 @@ import React from "react";
 import gagsData from "../../../data/gags.json" with {type: "json"}
 import { Gag, GagMenuProps } from "../logic/types.ts";
 import { Box, Button, Grid, Image } from "@mantine/core";
-import { CatppuccinColors } from "../../../themes/CatppuccinMocha.ts"
+import { useAppTheme } from "../../../themes/ThemeContext.tsx";
 import * as motion from "motion/react-client"
-import dreamlandTheme from "../../../themes/DreamlandTheme.ts";
 
 
 const GagMenu: React.FC<GagMenuProps> = ({ onSelectedGags, handlegagMenuHoverEnd, handlegagMenuHover, isLured }) => {
+  const { colors } = useAppTheme();
   const gags: Gag[] = gagsData
   const rowColors = [
-    CatppuccinColors.Yellow,
-    CatppuccinColors.Green,
-    CatppuccinColors.Blue,
-    CatppuccinColors.Peach,
-    CatppuccinColors.Mauve,
-    CatppuccinColors.Sky];
+    colors.Yellow,
+    colors.Green,
+    colors.Blue,
+    colors.Peach,
+    colors.Mauve,
+    colors.Sky];
   let colorCounter = -1
 
 
@@ -23,8 +23,8 @@ const GagMenu: React.FC<GagMenuProps> = ({ onSelectedGags, handlegagMenuHoverEnd
     <Box p='lg'
       style={{
         borderRadius: 10,
-        backgroundColor: dreamlandTheme.colors!.dark![9],
-        borderColor: dreamlandTheme.colors!.dark![4],
+        backgroundColor: colors.Crust,
+        borderColor: colors.Surface2,
         boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)'
       }}
     >
@@ -57,7 +57,7 @@ const GagMenu: React.FC<GagMenuProps> = ({ onSelectedGags, handlegagMenuHoverEnd
                     style={{
                       borderWidth: 0,
                       opacity: 0.9,
-                      background: disabled ? CatppuccinColors.Subtext1 : rowColors[colorCounter],
+                      background: disabled ? colors.Subtext1 : rowColors[colorCounter],
                     }}
                   >
                     <Image src={gag.Resource} height={"41rem"} fit="contain" draggable={false} />

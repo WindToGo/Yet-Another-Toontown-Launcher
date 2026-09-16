@@ -13,7 +13,7 @@ import Navbar from "./components/navbar/NavbarLink.tsx";
 import YATLReducer, { initialYatlState, YATLActionType } from "./state.ts";
 import { MTProfile, MTSession } from "./modules/multiToon/logic/MultiToonTypes.ts";
 import { LoadAllMTProfiles, Mt_get_window_from_pid, Mt_init } from "../bindings/YATL/services/multiservice.ts";
-import dreamlandTheme from "./themes/DreamlandTheme.ts";
+import { useAppTheme } from "./themes/ThemeContext.tsx";
 import { initTTRKeys } from "./modules/multiToon/logic/multiUtils.ts";
 import { Events } from "@wailsio/runtime";
 import InputWindow from "./modules/multiToon/components/inputWindow.tsx";
@@ -34,6 +34,8 @@ const App: React.FC = () => {
   );
 
   const [yatlState, yatlDispatch] = useReducer(YATLReducer, initialYatlState)
+
+  const { colors } = useAppTheme();
 
   useEffect(() => {
     const fetchAccounts = async () => {
@@ -193,6 +195,10 @@ const bindToonSession = async (pid: number) => {
           AddMTProfile={(profile: MTProfile) => yatlDispatch({ type: YATLActionType.ADD_MT_PROFILE, profile: profile })}
           EditMTProfile={(profile: MTProfile) => yatlDispatch({ type: YATLActionType.EDIT_MT_PROFILE, profile: profile })}
           RemoveMTProfile={(name: string) => yatlDispatch({ type: YATLActionType.REMOVE_MT_PROFILE, name })}
+          clickSync={yatlState.clickSync}
+          SetClickSyncKey={(key: string) => yatlDispatch({ type: YATLActionType.SET_CLICK_SYNC_KEY, key })}
+          SetClickSyncListening={(listening: boolean, controllerSession: number | null) =>
+            yatlDispatch({ type: YATLActionType.SET_CLICK_SYNC_LISTENING, listening, controllerSession })}
         />;
       case SidebarItems.Suits:
         return <CogDisguisePage
@@ -220,7 +226,7 @@ const bindToonSession = async (pid: number) => {
         width: { base: 80, md: 80, lg: 80 },
         breakpoint: "sm",
       }}
-      style={{ background: dreamlandTheme.colors!.dark![8] }}
+      style={{ background: colors.Mantle }}
     >
       <Navbar selectedPage={selectedPage} setSelectedPage={setSelectedPage} />
       <AppShell.Main>

@@ -11,6 +11,12 @@ export interface MTSession {
   profile: MTProfile,
 }
 
+export type ClickSyncState = {
+  key: string;
+  listening: boolean;
+  controllerSession: number | null;
+}
+
 export type MultiToonPageProps = {
   MTSessions: MTSession[];
   AddMTSession: (session: MTSession) => void;
@@ -19,6 +25,9 @@ export type MultiToonPageProps = {
   RemoveMTProfile: (name: string) => void;
   yatlProfiles: MTProfile[];
   accounts: string[];
+  clickSync: ClickSyncState;
+  SetClickSyncKey: (key: string) => void;
+  SetClickSyncListening: (listening: boolean, controllerSession: number | null) => void;
 }
 
 export const groups: Record<string, string[]> = {

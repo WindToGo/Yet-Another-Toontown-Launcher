@@ -1,4 +1,4 @@
-import { MTProfile, MTSession } from "./modules/multiToon//logic/MultiToonTypes";
+import { ClickSyncState, MTProfile, MTSession } from "./modules/multiToon//logic/MultiToonTypes";
 
 export type ToonSession = {
   port: number;
@@ -25,6 +25,7 @@ export type YATLState = {
   MTProfiles: MTProfile[];
   toonSessions: ToonSession[]; // active in-game toons, port → toon name, no username tie
   patchSessions: Record<string, PatchSession>; // username → in-progress update, absent when not updating
+  clickSync: ClickSyncState; // lives here (not MultiToonPage) so it survives switching sidebar pages
 }
 
 export enum YATLActionType {
@@ -46,6 +47,8 @@ export enum YATLActionType {
   PATCH_FILE_COMPLETE = "PATCH_FILE_COMPLETE",
   PATCH_FILE_ERROR = "PATCH_FILE_ERROR",
   PATCH_SESSION_ENDED = "PATCH_SESSION_ENDED",
+  SET_CLICK_SYNC_KEY = "SET_CLICK_SYNC_KEY",
+  SET_CLICK_SYNC_LISTENING = "SET_CLICK_SYNC_LISTENING",
 }
 
 export type YATLAction =
@@ -73,6 +76,8 @@ export type YATLAction =
   | { type: YATLActionType.PATCH_FILE_COMPLETE; username: string; file: string }
   | { type: YATLActionType.PATCH_FILE_ERROR; username: string; file: string }
   | { type: YATLActionType.PATCH_SESSION_ENDED; username: string }
+  | { type: YATLActionType.SET_CLICK_SYNC_KEY; key: string }
+  | { type: YATLActionType.SET_CLICK_SYNC_LISTENING; listening: boolean; controllerSession: number | null }
 
 export const initialYatlState: YATLState = {
   accounts: [],
@@ -81,6 +86,7 @@ export const initialYatlState: YATLState = {
   MTProfiles: [],
   toonSessions: [],
   patchSessions: {},
+  clickSync: { key: "", listening: false, controllerSession: null },
 };
 
 export default function YATLReducer(state: YATLState, action: YATLAction): YATLState {
@@ -241,6 +247,19 @@ export default function YATLReducer(state: YATLState, action: YATLAction): YATLS
       const updatedPatchSessions = { ...state.patchSessions };
       delete updatedPatchSessions[action.username];
       return { ...state, patchSessions: updatedPatchSessions };
+    }
+    case YATLActionType.SET_CLICK_SYNC_KEY: {
+      return { ...state, clickSync: { ...state.clickSync, key: action.key } };
+    }
+    case YATLActionType.SET_CLICK_SYNC_LISTENING: {
+      return {
+        ...state,
+        clickSync: {
+          ...state.clickSync,
+          listening: action.listening,
+          controllerSession: action.controllerSession,
+        },
+      };
     }
     default:
       return state;

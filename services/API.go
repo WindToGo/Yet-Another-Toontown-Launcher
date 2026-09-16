@@ -67,3 +67,10 @@ func (g *APIService) GetFishData(port int) ([]byte, error) {
 func (g *APIService) GetPopulation() (*ttrapi.Population, error) {
 	return ttrapi.GetPopulation()
 }
+
+// GetTTRVersion returns a short identifier for the currently-deployed TTR
+// client build. Cached on the Go side (see src/ttrAPI/version.go) so this is
+// safe to call often.
+func (g *APIService) GetTTRVersion() (string, error) {
+	return ttrapi.GetTTRVersion()
+}

@@ -3,8 +3,7 @@ import { MTProfile, MTSession } from "../logic/MultiToonTypes"
 import { IconKey, IconLink, IconPlugConnected, IconPlugOff, IconTrash } from "@tabler/icons-react"
 import KeybindButtons from "./keybindButtons"
 import { useDisclosure } from "@mantine/hooks"
-import dreamlandTheme from "../../../themes/DreamlandTheme"
-import { CatppuccinColors } from "../../../themes/CatppuccinMocha"
+import { useAppTheme } from "../../../themes/ThemeContext"
 import { createSessionWithClick, removeProfile } from "../logic/multiUtils"
 import { notifications } from "@mantine/notifications"
 import AttatchMenu from "./attatchMenu"
@@ -19,6 +18,7 @@ export type MultiToonSessionHolderProps = {
 }
 
 const MultiToonSessionHolder: React.FC<MultiToonSessionHolderProps> = ({ profile, EditMTProfile, RemoveMTProfile, addMTSession, yatlSessions, accounts }: MultiToonSessionHolderProps) => {
+  const { colors } = useAppTheme();
   const [opened, { open, close }] = useDisclosure(false);
   const [attatchedModalOpened, attatchedModal] = useDisclosure(false);
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
@@ -54,11 +54,11 @@ const MultiToonSessionHolder: React.FC<MultiToonSessionHolderProps> = ({ profile
       <Box
         style={{
           borderRadius: 10,
-          borderColor: dreamlandTheme.colors!.dark![4],
+          borderColor: colors.Surface2,
           boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)',
           display: "flex",
           justifyContent: "space-between",
-          backgroundColor: dreamlandTheme.colors!.dark![9],
+          backgroundColor: colors.Crust,
           padding: "0.7rem 1rem",
         }}
       >
@@ -70,36 +70,36 @@ const MultiToonSessionHolder: React.FC<MultiToonSessionHolderProps> = ({ profile
           <Button
             size="xs"
             leftSection={isSessionConnected ?
-              <IconPlugConnected size={"1rem"} color={CatppuccinColors.Mantle} /> :
-              <IconPlugOff size={"1rem"} color={CatppuccinColors.Mantle} />
+              <IconPlugConnected size={"1rem"} color={colors.Mantle} /> :
+              <IconPlugOff size={"1rem"} color={colors.Mantle} />
             }
-            color={isSessionConnected ? CatppuccinColors.Green : CatppuccinColors.Blue}
+            color={isSessionConnected ? colors.Green : colors.Blue}
             onClick={handleConnectSession}
           >
-            <Text c={CatppuccinColors.Mantle} fw={600}>{isSessionConnected ? `${connectedSessions} Connected` : `Connect Session`}</Text>
+            <Text c={colors.Mantle} fw={600}>{isSessionConnected ? `${connectedSessions} Connected` : `Connect Session`}</Text>
           </Button>
           <Button
             size="xs"
-            color={CatppuccinColors.Blue}
+            color={colors.Blue}
             onClick={attatchedModal.open}
-            leftSection={<IconLink size={"1rem"} color={CatppuccinColors.Mantle} />}
+            leftSection={<IconLink size={"1rem"} color={colors.Mantle} />}
           >
-            <Text c={CatppuccinColors.Mantle} fw={600}>Attatch Profile</Text>
+            <Text c={colors.Mantle} fw={600}>Attatch Profile</Text>
           </Button>
           <Button
             size="xs"
-            color={CatppuccinColors.Blue}
-            leftSection={<IconKey size={"1rem"} color={CatppuccinColors.Mantle} />}
+            color={colors.Blue}
+            leftSection={<IconKey size={"1rem"} color={colors.Mantle} />}
             onClick={open}
           >
-            <Text c={CatppuccinColors.Mantle} fw={600}>Edit Keymap</Text>
+            <Text c={colors.Mantle} fw={600}>Edit Keymap</Text>
           </Button>
           <Button
             size="xs"
-            color={CatppuccinColors.Red}
+            color={colors.Red}
             onClick={openDelete}
           >
-            <IconTrash size={"1rem"} color={CatppuccinColors.Mantle} />
+            <IconTrash size={"1rem"} color={colors.Mantle} />
           </Button>
         </Group>
       </Box >
@@ -115,7 +115,7 @@ const MultiToonSessionHolder: React.FC<MultiToonSessionHolderProps> = ({ profile
           <Button variant="default" onClick={closeDelete}>
             Cancel
           </Button>
-          <Button color={CatppuccinColors.Red} onClick={confirmRemoveProfile}>
+          <Button color={colors.Red} onClick={confirmRemoveProfile}>
             Delete
           </Button>
         </Group>

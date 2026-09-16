@@ -5,7 +5,7 @@ import { Box, Button, Drawer, Grid, Group, Image, Slider, Stack, Switch, Text } 
 import { useDisclosure } from "@mantine/hooks";
 import GagMenu from "./components/GagMenu.tsx";
 import SOSMenu from "./components/SOSMenu.tsx";
-import { CatppuccinColors } from "../../themes/CatppuccinMocha.ts";
+import { useAppTheme } from "../../themes/ThemeContext.tsx";
 import CogHealthBar from "./components/cogHealthBar.tsx";
 import AccuracyBar from "./components/AccuracyBar.tsx";
 import { AttackAnalysis } from "../../../bindings/YATL/src/calculator/models.ts";
@@ -16,6 +16,7 @@ import { FloatingButton } from "../../components/buttons.tsx";
 import { IconQuestionMark } from "@tabler/icons-react";
 
 const Calculator: React.FC = () => {
+  const { colors } = useAppTheme();
   const [opened, { open, close }] = useDisclosure(false);
   const [showSOSMenu, setShowSOSMenu] = useState<boolean>(false);
   const [analyzedAttacks, setAnalyzedAttacks] = useState<Array<AttackAnalysis>>([]);
@@ -127,7 +128,7 @@ const Calculator: React.FC = () => {
                   }}
                   onClick={() => calcDispatch({ type: CalcActionType.REMOVE_GAG, gag })}
                   style={{
-                    background: gag.IsOrg ? CatppuccinColors.Green : CatppuccinColors.Blue,
+                    background: gag.IsOrg ? colors.Green : colors.Blue,
                     border: 0
                   }}
                 >

@@ -1,25 +1,11 @@
-import { Box, Divider, Paper, SimpleGrid, Text } from "@mantine/core";
+import { Box, Divider, Paper, Select, Text } from "@mantine/core";
 import { IconSettings } from "@tabler/icons-react";
-import { CatppuccinColors } from "../../themes/CatppuccinMocha.ts";
-
-interface ThemeOptionProps {
-  label: string;
-}
-
-function ThemeOption({ label }: ThemeOptionProps) {
-  return (
-    <Paper
-      withBorder
-      p="md"
-      radius="md"
-      style={{ background: CatppuccinColors.Surface0, cursor: "default" }}
-    >
-      <Text fw={600} tt="capitalize">{label}</Text>
-    </Paper>
-  );
-}
+import { useAppTheme } from "../../themes/ThemeContext.tsx";
+import { ThemeName } from "../../themes/types.ts";
 
 export default function SettingsPage() {
+  const { themeName, setThemeName, themeList, colors } = useAppTheme();
+
   return (
     <>
       <Box
@@ -36,12 +22,15 @@ export default function SettingsPage() {
       </Box>
       <Divider pb={"1rem"} />
 
-      <Paper withBorder p="md" radius="md" style={{ background: CatppuccinColors.Crust }}>
+      <Paper withBorder p="md" radius="md" style={{ background: colors.Crust }}>
         <Text fw={700} fz="lg" mb="md">Themes</Text>
-        <SimpleGrid cols={{ base: 1, xs: 2 }}>
-          <ThemeOption label="dreamland" />
-          <ThemeOption label="brrrgh" />
-        </SimpleGrid>
+        <Select
+          data={themeList.map((theme) => ({ value: theme.name, label: theme.label }))}
+          value={themeName}
+          onChange={(value) => value && setThemeName(value as ThemeName)}
+          allowDeselect={false}
+          w={220}
+        />
       </Paper>
     </>
   );

@@ -2,21 +2,12 @@ import React from "react";
 import sosToonsData from "../../../data/sos_toons.json" with {type: "json"}
 import { Gag, GagAttack, GagMenuProps, SOSToon } from "../logic/types.ts";
 import { Box, Button, Group, Image, Stack, Text } from "@mantine/core";
-import { CatppuccinColors } from "../../../themes/CatppuccinMocha.ts"
+import { useAppTheme } from "../../../themes/ThemeContext.tsx";
 import * as motion from "motion/react-client"
-import dreamlandTheme from "../../../themes/DreamlandTheme.ts";
 
 // Same left-to-right track order (and colors) as GagMenu, so the two menus
 // feel like the same layout.
 const TRACK_ORDER = ["Trap", "Lure", "Sound", "Throw", "Squirt", "Drop"];
-const rowColors = [
-  CatppuccinColors.Yellow,
-  CatppuccinColors.Green,
-  CatppuccinColors.Blue,
-  CatppuccinColors.Peach,
-  CatppuccinColors.Mauve,
-  CatppuccinColors.Sky,
-];
 
 // Stun dealt by a normal gag of each track, so a non-SOS gag chained after
 // an SOS gag in the same attack still gets the right accuracy bonus.
@@ -45,7 +36,17 @@ function toGag(toon: SOSToon): Gag {
 }
 
 const SOSMenu: React.FC<GagMenuProps> = ({ onSelectedGags, handlegagMenuHoverEnd, handlegagMenuHover, isLured }) => {
+  const { colors } = useAppTheme();
   const toons: SOSToon[] = sosToonsData;
+
+  const rowColors = [
+    colors.Yellow,
+    colors.Green,
+    colors.Blue,
+    colors.Peach,
+    colors.Mauve,
+    colors.Sky,
+  ];
 
   const tracks = TRACK_ORDER.map((type) =>
     toons.filter((toon) => toon.type === type).sort((a, b) => a.tier - b.tier)
@@ -55,8 +56,8 @@ const SOSMenu: React.FC<GagMenuProps> = ({ onSelectedGags, handlegagMenuHoverEnd
     <Box p='lg'
       style={{
         borderRadius: 10,
-        backgroundColor: dreamlandTheme.colors!.dark![9],
-        borderColor: dreamlandTheme.colors!.dark![4],
+        backgroundColor: colors.Crust,
+        borderColor: colors.Surface2,
         boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)'
       }}
     >
@@ -87,16 +88,16 @@ const SOSMenu: React.FC<GagMenuProps> = ({ onSelectedGags, handlegagMenuHoverEnd
                       style={{
                         borderWidth: 0,
                         opacity: 0.9,
-                        background: disabled ? CatppuccinColors.Subtext1 : rowColors[rowIndex],
+                        background: disabled ? colors.Subtext1 : rowColors[rowIndex],
                       }}
                     >
                       <Group gap={8} wrap="nowrap" align="center" w="100%">
                         <Image src={toon.img} h={44} w={44} fit="contain" radius="sm" draggable={false} />
                         <Stack gap={0} align="flex-start" style={{ minWidth: 0 }}>
-                          <Text size="sm" fw={700} c={CatppuccinColors.Mantle} lh={1.2} truncate="end">
+                          <Text size="sm" fw={700} c={colors.Mantle} lh={1.2} truncate="end">
                             {toon.gag}
                           </Text>
-                          <Text size="xs" c={CatppuccinColors.Mantle} lh={1.2}>
+                          <Text size="xs" c={colors.Mantle} lh={1.2}>
                             {toon.damage} {TRACK_ORDER[rowIndex] === "Lure" ? "turns" : "dmg"}
                           </Text>
                         </Stack>

@@ -1,7 +1,8 @@
 import { notifications } from "@mantine/notifications";
-import { LoadTTRControls, Mt_init, Mt_select_window, Mt_set_key_down, Mt_set_key_up, RemoveMTProfile, SaveMTProfile } from "../../../../bindings/YATL/services/multiservice";
+import { LoadTTRControls, Mt_init, Mt_listen_and_sync_clicks, Mt_select_window, Mt_set_key_down, Mt_set_key_up, Mt_stop_listening, RemoveMTProfile, SaveMTProfile } from "../../../../bindings/YATL/services/multiservice";
 import { MTProfile, MTSession } from "./MultiToonTypes";
 import { sanitizeRecord } from "../../../utils/sanitizeRecord";
+import { toX11KeyName } from "./x11Keys";
 
 let ttrKeys: Record<string, string> = {};
 
@@ -87,6 +88,21 @@ export async function setKeyUp(key: string, session: MTSession): Promise<void> {
   if (!pandaKey) return;
 
   await Mt_set_key_up(session.mt_session, session.window, pandaKey);
+}
+
+// Grabs `key` and mirrors clicks made on any window in `windows` to the
+// others. `controllerSession` just needs to be any live mt_session id; it
+// owns the underlying listener until stopClickSync is called for the same id.
+// `key` is a browser KeyboardEvent.key value; it's translated to the X11
+// keysym name mtlib expects before being sent over.
+export async function startClickSync(controllerSession: number, key: string, windows: number[]): Promise<void> {
+  const x11Key = toX11KeyName(key);
+  if (!x11Key) throw new Error(`Unsupported click-sync key: ${key}`);
+  await Mt_listen_and_sync_clicks(controllerSession, x11Key, windows);
+}
+
+export async function stopClickSync(controllerSession: number): Promise<void> {
+  await Mt_stop_listening(controllerSession);
 }
 
 export async function createSessionWithClick(profile: MTProfile): Promise<MTSession> {

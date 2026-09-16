@@ -1,5 +1,6 @@
 import { Box, Button, Divider, Modal, Text, TextInput } from "@mantine/core";
 import MultiToonSessionHolder from "./components/MultiToonSessionHolder";
+import ClickSyncPanel from "./components/clickSyncPanel";
 import { MultiToonPageProps } from "./logic/MultiToonTypes"
 import { useState } from "react";
 import { useDisclosure } from "@mantine/hooks";
@@ -8,7 +9,7 @@ import { FloatingButton } from "../../components/buttons";
 import { newProfile, saveProfiles } from "./logic/multiUtils";
 import { notifications } from "@mantine/notifications";
 
-const MultiToonPage: React.FC<MultiToonPageProps> = ({ MTSessions, AddMTSession, AddMTProfile, yatlProfiles, EditMTProfile, RemoveMTProfile, accounts }: MultiToonPageProps) => {
+const MultiToonPage: React.FC<MultiToonPageProps> = ({ MTSessions, AddMTSession, AddMTProfile, yatlProfiles, EditMTProfile, RemoveMTProfile, accounts, clickSync, SetClickSyncKey, SetClickSyncListening }: MultiToonPageProps) => {
   const [opened, { open, close }] = useDisclosure(false);
   const [profileName, setProfilename] = useState<string>("");
   const profiles = yatlProfiles
@@ -48,6 +49,14 @@ const MultiToonPage: React.FC<MultiToonPageProps> = ({ MTSessions, AddMTSession,
         </Box>
       </Box>
       <Divider pb={"1rem"} />
+      <Box pb={"1rem"}>
+        <ClickSyncPanel
+          sessions={MTSessions}
+          clickSync={clickSync}
+          setKey={SetClickSyncKey}
+          setListening={SetClickSyncListening}
+        />
+      </Box>
       {profiles.map((profile) => {
         return (
           <Box pb={"0.5rem"} pt={"0.5rem"}>

@@ -3,7 +3,8 @@ import { IconShield } from "@tabler/icons-react";
 import { GetCogsuitInfo } from "../../bindings/YATL/services/cogdisguiseservice.ts";
 import { FastestByDepartment, SuitByDepartment, CogSuit } from "../../bindings/YATL/src/cogDisguise/models.ts";
 import { useEffect, useState } from "react";
-import { CatppuccinColors } from "../themes/CatppuccinMocha.ts";
+import { AppPalette } from "../themes/types.ts";
+import { useAppTheme } from "../themes/ThemeContext.tsx";
 import { ToonSession } from "../state.ts";
 import { sanitizeRecord } from "../utils/sanitizeRecord.ts";
 
@@ -12,27 +13,29 @@ interface CogDisguisePageProps {
   hasRunningInstance: boolean;
 }
 
-// --- Facility colour palette (Catppuccin) ---
+// --- Facility colour palette ---
 
-const FACILITY_COLORS: Record<string, string> = {
-  "Final Fringe": CatppuccinColors.Peach,
-  "First Fairway": CatppuccinColors.Yellow,
-  "Five Story": CatppuccinColors.Maroon,
-  "Four Story DDL or Brghh": CatppuccinColors.Flamingo,
-  "Four Story": CatppuccinColors.Rosewater,
-  "Three Story": CatppuccinColors.Pink,
-  "Senior Wing": CatppuccinColors.Blue,
-  "Junior Wing": CatppuccinColors.Sapphire,
-  "five story": CatppuccinColors.Sky,
-  "four story": CatppuccinColors.Lavender,
-  "three story": CatppuccinColors.Mauve,
-  "Bullion Mint": CatppuccinColors.Green,
-  "Coin Mint": CatppuccinColors.Teal,
-  "Full Steel": CatppuccinColors.Red,
-  "Short Steel": CatppuccinColors.Maroon,
-  "Short Scrap": CatppuccinColors.Flamingo,
-  "Remaining": CatppuccinColors.Surface2,
-};
+function getFacilityColors(colors: AppPalette): Record<string, string> {
+  return {
+    "Final Fringe": colors.Peach,
+    "First Fairway": colors.Yellow,
+    "Five Story": colors.Maroon,
+    "Four Story DDL or Brghh": colors.Flamingo,
+    "Four Story": colors.Rosewater,
+    "Three Story": colors.Pink,
+    "Senior Wing": colors.Blue,
+    "Junior Wing": colors.Sapphire,
+    "five story": colors.Sky,
+    "four story": colors.Lavender,
+    "three story": colors.Mauve,
+    "Bullion Mint": colors.Green,
+    "Coin Mint": colors.Teal,
+    "Full Steel": colors.Red,
+    "Short Steel": colors.Maroon,
+    "Short Scrap": colors.Flamingo,
+    "Remaining": colors.Surface2,
+  };
+}
 
 const DEPT_LABELS: Record<string, string> = {
   c: "Bossbot",
@@ -41,12 +44,14 @@ const DEPT_LABELS: Record<string, string> = {
   S: "Sellbot",
 };
 
-const DEPT_ACCENT: Record<string, string> = {
-  c: CatppuccinColors.Peach,
-  l: CatppuccinColors.Blue,
-  M: CatppuccinColors.Green,
-  S: CatppuccinColors.Red,
-};
+function getDeptAccent(colors: AppPalette): Record<string, string> {
+  return {
+    c: colors.Peach,
+    l: colors.Blue,
+    M: colors.Green,
+    S: colors.Red,
+  };
+}
 
 const FACILITY_POINTS: Record<"c" | "l" | "M" | "S", Record<string, number>> = {
   c: {
@@ -89,6 +94,9 @@ interface SuitCardProps {
 }
 
 function SuitCard({ deptKey, suit, fastest }: SuitCardProps) {
+  const { colors } = useAppTheme();
+  const FACILITY_COLORS = getFacilityColors(colors);
+  const DEPT_ACCENT = getDeptAccent(colors);
   const accent = DEPT_ACCENT[deptKey];
   const deptLabel = DEPT_LABELS[deptKey];
   const isMax = suit.level >= 50;
@@ -129,7 +137,7 @@ function SuitCard({ deptKey, suit, fastest }: SuitCardProps) {
     count: w.count,
     points: w.points,
     part: Math.round((w.points / denom) * 100),
-    color: FACILITY_COLORS[w.name] ?? CatppuccinColors.Overlay1,
+    color: FACILITY_COLORS[w.name] ?? colors.Overlay1,
   }));
 
   const remainingPart = Math.round((remaining / denom) * 100);
@@ -153,7 +161,7 @@ function SuitCard({ deptKey, suit, fastest }: SuitCardProps) {
   ));
 
   return (
-    <Paper p="md" radius="md" style={{background: `${CatppuccinColors.Crust}`, boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)'}}>
+    <Paper p="md" radius="md" style={{background: `${colors.Crust}`, boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)'}}>
       <Group justify="space-between" mb={4}>
         <Group gap="xs" align="center">
           <Text fw={700} fz="lg">{deptLabel}</Text>
@@ -176,13 +184,13 @@ function SuitCard({ deptKey, suit, fastest }: SuitCardProps) {
       )}
 
       {isMax ? (
-        <Box style={{ background: `${CatppuccinColors.Teal}22`, borderRadius: 8, padding: "1rem", textAlign: "center" }}>
-          <Text fw={700} c={CatppuccinColors.Teal} fz="xl">✦ MAX LEVEL ✦</Text>
+        <Box style={{ background: `${colors.Teal}22`, borderRadius: 8, padding: "1rem", textAlign: "center" }}>
+          <Text fw={700} c={colors.Teal} fz="xl">✦ MAX LEVEL ✦</Text>
           <Text fz="sm" c="dimmed">{suit.suit.name} · Lv 50</Text>
         </Box>
       ) : neededPoints === 0 ? (
-        <Box style={{ background: `${CatppuccinColors.Green}22`, borderRadius: 8, padding: "1rem", textAlign: "center" }}>
-          <Text fw={700} c={CatppuccinColors.Green} fz="xl">✦ READY FOR PROMOTION ✦</Text>
+        <Box style={{ background: `${colors.Green}22`, borderRadius: 8, padding: "1rem", textAlign: "center" }}>
+          <Text fw={700} c={colors.Green} fz="xl">✦ READY FOR PROMOTION ✦</Text>
           <Text fz="sm" c="dimmed">{suit.suit.name} · Lv {suit.level}</Text>
         </Box>
       ) : (
@@ -200,7 +208,7 @@ function SuitCard({ deptKey, suit, fastest }: SuitCardProps) {
             )}
           </Progress.Root>
           {overshootPoints > 0 && (
-            <Text fz="xs" c={CatppuccinColors.Subtext0} mb="xl">
+            <Text fz="xs" c={colors.Subtext0} mb="xl">
               Overshoots {overshootPoints.toLocaleString()} pts past the promotion target.
             </Text>
           )}
@@ -233,6 +241,7 @@ interface ToonPanelProps {
 }
 
 function ToonPanel({ port }: ToonPanelProps) {
+  const { colors } = useAppTheme();
   const [fastest, setFastest] = useState<FastestByDepartment | null>(null);
   const [suitInfo, setSuitInfo] = useState<SuitByDepartment | null>(null);
   const [loading, setLoading] = useState(true);
@@ -251,7 +260,7 @@ function ToonPanel({ port }: ToonPanelProps) {
   }, [port]);
 
   if (loading) return <Text c="dimmed">Loading cog suit data…</Text>;
-  if (error) return <Text c={CatppuccinColors.Red}>{error}</Text>;
+  if (error) return <Text c={colors.Red}>{error}</Text>;
   if (!fastest || !suitInfo) return <Text c="dimmed">No data available.</Text>;
 
   return (
@@ -271,13 +280,14 @@ interface EmptyStateProps {
 }
 
 function EmptyState({ hasRunningInstance }: EmptyStateProps) {
+  const { colors } = useAppTheme();
   const message = hasRunningInstance
     ? "Enable companion apps in settings then relaunch Toontown Rewritten."
     : "No instances of Toontown Rewritten are running.";
 
   return (
     <Box style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, paddingTop: "4rem" }}>
-      <IconShield size={48} color={CatppuccinColors.Overlay1} />
+      <IconShield size={48} color={colors.Overlay1} />
       <Text fw={600} fz="lg" c="dimmed">No toons synced</Text>
       <Text fz="sm" c="dimmed" ta="center">{message}</Text>
     </Box>

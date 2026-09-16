@@ -106,3 +106,35 @@ func (s *Session) GetWindowFromPID(pid int) C.uint64_t {
 	log.Info().Msg(fmt.Sprintf("Window: %d, pid: %d", window, pid))
 	return window
 }
+
+// ListenAndSyncClicks blocks until StopListening is called for this session,
+// so callers should run it on its own goroutine.
+func (s *Session) ListenAndSyncClicks(key string, windows []uint64) error {
+	if s == nil || s.ptr == nil {
+		return errors.New("session is nil")
+	}
+
+	cs := C.CString(key)
+	defer C.free(unsafe.Pointer(cs))
+
+	cWindows := make([]C.uint64_t, len(windows))
+	for i, w := range windows {
+		cWindows[i] = C.uint64_t(w)
+	}
+
+	var windowsPtr *C.uint64_t
+	if len(cWindows) > 0 {
+		windowsPtr = &cWindows[0]
+	}
+
+	C.mtlib_listen_and_sync_clicks(s.ptr, cs, windowsPtr, C.size_t(len(windows)))
+	return nil
+}
+
+func (s *Session) StopListening() error {
+	if s == nil || s.ptr == nil {
+		return errors.New("session is nil")
+	}
+	C.mtlib_stop_listening(s.ptr)
+	return nil
+}

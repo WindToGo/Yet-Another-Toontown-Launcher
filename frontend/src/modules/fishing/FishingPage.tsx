@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Box, Divider, Paper, SimpleGrid, Tabs, Text } from "@mantine/core";
 import { IconFish } from "@tabler/icons-react";
-import { CatppuccinColors } from "../../themes/CatppuccinMocha.ts";
+import { useAppTheme } from "../../themes/ThemeContext.tsx";
 import { ToonSession } from "../../state.ts";
 import { GetFishData } from "../../../bindings/YATL/services/apiservice.ts";
 import FishCalculator, { LocationRank } from "./FishCalculator.ts";
@@ -11,8 +11,6 @@ interface FishingPageProps {
   hasRunningInstance: boolean;
 }
 
-const RANK_ACCENT = [CatppuccinColors.Yellow, CatppuccinColors.Sapphire, CatppuccinColors.Peach];
-
 interface BestLocationCardProps {
   rank: number;
   location: string;
@@ -20,11 +18,13 @@ interface BestLocationCardProps {
 }
 
 function BestLocationCard({ rank, location, rank_data }: BestLocationCardProps) {
-  const accent = RANK_ACCENT[rank] ?? CatppuccinColors.Overlay1;
+  const { colors } = useAppTheme();
+  const RANK_ACCENT = [colors.Yellow, colors.Sapphire, colors.Peach];
+  const accent = RANK_ACCENT[rank] ?? colors.Overlay1;
   const chance = (rank_data.total * 100).toFixed(2);
 
   return (
-    <Paper p="md" radius="md" style={{ background: `${CatppuccinColors.Crust}`, boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)'}}>
+    <Paper p="md" radius="md" style={{ background: `${colors.Crust}`, boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)'}}>
       <Text fw={700} c="dimmed" fz="xs" tt="uppercase" style={{ letterSpacing: "0.04em" }}>
         #{rank + 1} Best Pond
       </Text>
@@ -75,6 +75,7 @@ interface FishingPanelProps {
 }
 
 function FishingPanel({ port }: FishingPanelProps) {
+  const { colors } = useAppTheme();
   const [topLocations, setTopLocations] = useState<[string, LocationRank][] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +94,7 @@ function FishingPanel({ port }: FishingPanelProps) {
   }, [port]);
 
   if (loading) return <Text c="dimmed">Loading fishing data…</Text>;
-  if (error) return <Text c={CatppuccinColors.Red}>{error}</Text>;
+  if (error) return <Text c={colors.Red}>{error}</Text>;
   if (!topLocations || topLocations.length === 0) {
     return <Text c="dimmed">No new fish locations found — you may have caught everything your rod allows!</Text>;
   }
@@ -112,13 +113,14 @@ interface EmptyStateProps {
 }
 
 function EmptyState({ hasRunningInstance }: EmptyStateProps) {
+  const { colors } = useAppTheme();
   const message = hasRunningInstance
     ? "Enable companion apps in settings then relaunch Toontown Rewritten."
     : "No instances of Toontown Rewritten are running.";
 
   return (
     <Box style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, paddingTop: "4rem" }}>
-      <IconFish size={48} color={CatppuccinColors.Overlay1} />
+      <IconFish size={48} color={colors.Overlay1} />
       <Text fw={600} fz="lg" c="dimmed">No toons synced</Text>
       <Text fz="sm" c="dimmed" ta="center">{message}</Text>
     </Box>

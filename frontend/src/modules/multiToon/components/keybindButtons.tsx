@@ -2,7 +2,7 @@ import { useState } from "react";
 import { groups, MTProfile } from "../logic/MultiToonTypes";
 import { Box, Button, Divider, Group, Text } from "@mantine/core";
 import { saveProfile } from "../logic/multiUtils";
-import dreamlandTheme from "../../../themes/DreamlandTheme";
+import { useAppTheme } from "../../../themes/ThemeContext";
 
 export type KeybindButtonProps = {
   profile: MTProfile
@@ -10,6 +10,7 @@ export type KeybindButtonProps = {
 }
 
 const KeybindButtons: React.FC<KeybindButtonProps> = ({ profile, EditMTProfile }: KeybindButtonProps) => {
+  const { colors } = useAppTheme();
   const [listeningFor, setListeningFor] = useState<string | null>(null);
   const handleButtonClick = (action: string) => {
     setListeningFor(action);
@@ -70,7 +71,7 @@ const KeybindButtons: React.FC<KeybindButtonProps> = ({ profile, EditMTProfile }
         pos="sticky"
         pt={"0.5rem"}
         pb={"0.5rem"}
-        bg={dreamlandTheme.colors!.dark![7]}
+        bg={colors.Base}
         bottom={0}
         style={{
           zIndex: 10,

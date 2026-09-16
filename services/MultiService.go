@@ -51,6 +51,24 @@ func (g *MultiService) Mt_shutdown(id uint8) {
 	RemoveSession(id)
 }
 
+// Mt_listen_and_sync_clicks grabs `key` and, while it's held, mirrors clicks
+// made on any of `windows` to all the others. Runs on its own goroutine since
+// the underlying call blocks until Mt_stop_listening is called for this id.
+func (g *MultiService) Mt_listen_and_sync_clicks(id uint8, key string, windows []uint64) {
+	session := GetSession(id)
+	go func() {
+		if err := session.ListenAndSyncClicks(key, windows); err != nil {
+			log.Error().Err(err).Msg("Failed to listen and sync clicks")
+		}
+	}()
+}
+
+func (g *MultiService) Mt_stop_listening(id uint8) {
+	if err := GetSession(id).StopListening(); err != nil {
+		log.Error().Err(err).Msg("Failed to stop click listener")
+	}
+}
+
 func (g *MultiService) SaveMTProfile(name string, profile multi.MTProfile) {
 	multi.SaveMTProfile(name, profile)
 }

@@ -12,6 +12,7 @@ import NewAccount from "./components/newAccount";
 import { IconManualGearbox, IconPlus, IconQuestionMark } from "@tabler/icons-react";
 import AccountPanel from "./components/accountPanel";
 import PopulationBar from "./components/populationBar";
+import VersionFooter from "./components/versionFooter";
 import { FloatingButton } from "../../components/buttons";
 
 // Gap left between the divider and the top of the test image.
@@ -99,6 +100,7 @@ const LoginPage: React.FC<LoginProps> = ({
         patchSessions={patchSessions}
       />
       <PopulationBar />
+      <VersionFooter />
       <FloatingButton right={"8rem"} onClick={() => {}}>
         <IconQuestionMark size="2.5rem"/>
       </FloatingButton>

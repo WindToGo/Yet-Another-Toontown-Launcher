@@ -2,8 +2,7 @@ import { Box, Collapse, Group, Modal, Progress, Stack, Text } from "@mantine/cor
 import { IconPlayerPlay, IconRefresh, IconTrash } from "@tabler/icons-react";
 import { Button } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import dreamlandTheme from "../../../themes/DreamlandTheme";
-import { CatppuccinColors } from "../../../themes/CatppuccinMocha";
+import { useAppTheme } from "../../../themes/ThemeContext";
 import { PatchSession } from "../../../state";
 import { formatBytes } from "../../../utils/formatBytes";
 
@@ -55,6 +54,7 @@ const AccountItem: React.FC<AccountItemProps> = ({
   processIDs,
   patchSession,
 }) => {
+  const { colors } = useAppTheme();
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
   const isPlaying = processIDs[username] >= 0;
   const isUpdating = !!patchSession;
@@ -73,7 +73,7 @@ const AccountItem: React.FC<AccountItemProps> = ({
           <Button variant="default" onClick={closeDelete}>
             Cancel
           </Button>
-          <Button color={CatppuccinColors.Red} onClick={confirmRemoveAccount}>
+          <Button color={colors.Red} onClick={confirmRemoveAccount}>
             Delete
           </Button>
         </Group>
@@ -82,7 +82,7 @@ const AccountItem: React.FC<AccountItemProps> = ({
         style={{
           padding: "0.7rem 1rem",
           borderRadius: 10,
-          backgroundColor: dreamlandTheme.colors!.dark![9],
+          backgroundColor: colors.Crust,
           boxShadow: "0 2px 6px rgba(0, 0, 0, 0.4)",
         }}
       >
@@ -92,30 +92,30 @@ const AccountItem: React.FC<AccountItemProps> = ({
           </Text>
           <Group>
             {isUpdating ? (
-              <Button size="xs" color={CatppuccinColors.Peach} loading>
-                <Text c={CatppuccinColors.Mantle} fw={600}>Updating</Text>
+              <Button size="xs" color={colors.Peach} loading>
+                <Text c={colors.Mantle} fw={600}>Updating</Text>
               </Button>
             ) : isPlaying ? (
               <Button
                 size="xs"
-                color={CatppuccinColors.Green}
-                leftSection={<IconRefresh size={"1rem"} color={CatppuccinColors.Mantle} />}
+                color={colors.Green}
+                leftSection={<IconRefresh size={"1rem"} color={colors.Mantle} />}
                 onClick={() => {}}
               >
-                <Text c={CatppuccinColors.Mantle} fw={600}>Restart</Text>
+                <Text c={colors.Mantle} fw={600}>Restart</Text>
               </Button>
             ) : (
               <Button
                 size="xs"
-                color={CatppuccinColors.Blue}
-                leftSection={<IconPlayerPlay size={"1rem"} color={CatppuccinColors.Mantle} />}
+                color={colors.Blue}
+                leftSection={<IconPlayerPlay size={"1rem"} color={colors.Mantle} />}
                 onClick={() => void handlePlay(username)}
               >
-                <Text c={CatppuccinColors.Mantle} fw={600}>Play</Text>
+                <Text c={colors.Mantle} fw={600}>Play</Text>
               </Button>
             )}
-            <Button size="xs" color={CatppuccinColors.Red} onClick={openDelete}>
-              <IconTrash size={"1rem"} color={CatppuccinColors.Mantle} />
+            <Button size="xs" color={colors.Red} onClick={openDelete}>
+              <IconTrash size={"1rem"} color={colors.Mantle} />
             </Button>
           </Group>
         </Box>
@@ -129,12 +129,12 @@ const AccountItem: React.FC<AccountItemProps> = ({
                   <Group justify="space-between" gap={4} mb={2} wrap="nowrap">
                     <Text
                       size="xs"
-                      c={CatppuccinColors.Subtext0}
+                      c={colors.Subtext0}
                       style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                     >
                       {f.file}
                     </Text>
-                    <Text size="xs" c={CatppuccinColors.Subtext0} style={{ flexShrink: 0 }}>
+                    <Text size="xs" c={colors.Subtext0} style={{ flexShrink: 0 }}>
                       {f.status === "error"
                         ? "Failed"
                         : f.totalBytes > 0
@@ -144,7 +144,7 @@ const AccountItem: React.FC<AccountItemProps> = ({
                   </Group>
                   <Progress
                     value={f.totalBytes > 0 ? Math.min(100, (f.bytesDownloaded / f.totalBytes) * 100) : 100}
-                    color={f.status === "error" ? CatppuccinColors.Red : CatppuccinColors.Blue}
+                    color={f.status === "error" ? colors.Red : colors.Blue}
                     striped={f.status !== "error" && f.totalBytes <= 0}
                     animated={f.status !== "error" && f.totalBytes <= 0}
                     size="sm"

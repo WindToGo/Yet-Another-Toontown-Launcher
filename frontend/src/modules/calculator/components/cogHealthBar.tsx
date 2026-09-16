@@ -1,10 +1,10 @@
 import { Box } from "@mantine/core";
 import React from "react";
-import { CatppuccinColors } from "../../../themes/CatppuccinMocha";
+import { useAppTheme } from "../../../themes/ThemeContext";
 import { CogHealthBarProps } from "../logic/types";
-import dreamlandTheme from "../../../themes/DreamlandTheme";
 
 const CogHealthBar: React.FC<CogHealthBarProps> = ({ finalDamage, cogHealthModifier, tempDamage }) => {
+  const { colors } = useAppTheme();
   const levelValues: number[] = [
     6,
     12,
@@ -35,9 +35,9 @@ const CogHealthBar: React.FC<CogHealthBarProps> = ({ finalDamage, cogHealthModif
   }));
 
   const getHealthStage = (defeated: boolean, tempDefeated: boolean) => {
-    if (defeated) return CatppuccinColors.Green
-    if (tempDefeated) return CatppuccinColors.Peach
-    return CatppuccinColors.Red
+    if (defeated) return colors.Green
+    if (tempDefeated) return colors.Peach
+    return colors.Red
   }
 
   return (
@@ -46,7 +46,7 @@ const CogHealthBar: React.FC<CogHealthBarProps> = ({ finalDamage, cogHealthModif
         display: 'flex',
         justifyContent: 'space-between',
         padding: 10,
-        backgroundColor: dreamlandTheme.colors!.dark![9],
+        backgroundColor: colors.Crust,
         borderRadius: 10,
         boxShadow: '0 2px 6px rgba(0, 0, 0, 0.4)'
       }}
@@ -66,11 +66,11 @@ const CogHealthBar: React.FC<CogHealthBarProps> = ({ finalDamage, cogHealthModif
             <div style={{
               fontSize: 25,
               fontWeight: 600,
-              color: CatppuccinColors.Mantle
+              color: colors.Mantle
             }}>
               {`${lvl.level}`}
             </div>
-            <div style={{ color: CatppuccinColors.Mantle }}>
+            <div style={{ color: colors.Mantle }}>
               {`${tempDamage === 0 ? lvl.remainingHealth : lvl.remainingTempHealth}`}
             </div>
           </Box>
