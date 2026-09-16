@@ -16,6 +16,7 @@ export type MultiToonPageProps = {
   AddMTSession: (session: MTSession) => void;
   AddMTProfile: (profile: MTProfile) => void;
   EditMTProfile: (profile: MTProfile) => void;
+  RemoveMTProfile: (name: string) => void;
   yatlProfiles: MTProfile[];
   accounts: string[];
 }

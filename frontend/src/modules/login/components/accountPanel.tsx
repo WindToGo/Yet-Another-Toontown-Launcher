@@ -1,46 +1,41 @@
-import { Box, Group, Text } from "@mantine/core";
-import { IconGripVertical, IconPlayerPlay, IconRefresh, IconTrash } from "@tabler/icons-react";
+import { Box, Collapse, Group, Modal, Progress, Stack, Text } from "@mantine/core";
+import { IconPlayerPlay, IconRefresh, IconTrash } from "@tabler/icons-react";
 import { Button } from "@mantine/core";
-import { Reorder, useDragControls } from "framer-motion";
-import { useEffect, useState } from "react";
-import * as motion from "motion/react-client";
+import { useDisclosure } from "@mantine/hooks";
 import dreamlandTheme from "../../../themes/DreamlandTheme";
 import { CatppuccinColors } from "../../../themes/CatppuccinMocha";
+import { PatchSession } from "../../../state";
+import { formatBytes } from "../../../utils/formatBytes";
 
 type AccountPanelProps = {
   handlePlay: (username: string) => Promise<void>;
+  handleRemoveAccount: (username: string) => Promise<void>;
   accounts: string[];
   processIDs: Record<string, number>;
+  patchSessions: Record<string, PatchSession>;
 };
 
 const AccountPanel: React.FC<AccountPanelProps> = ({
   handlePlay,
+  handleRemoveAccount,
   accounts,
   processIDs,
+  patchSessions,
 }) => {
-  const [localAccounts, setLocalAccounts] = useState(accounts);
-
-  useEffect(() => {
-    setLocalAccounts(accounts);
-  }, [accounts]);
-
   return (
-    <Box>
-      <Reorder.Group
-        axis="y"
-        values={localAccounts}
-        onReorder={setLocalAccounts}
-        style={{ display: "flex", flexDirection: "column", gap: 10 }}
-      >
-        {localAccounts.map((username) => (
+    <Box mt="md" style={{ width: "55%" }}>
+      <Stack gap={10}>
+        {accounts.map((username) => (
           <AccountItem
             username={username}
             handlePlay={handlePlay}
+            handleRemoveAccount={handleRemoveAccount}
             processIDs={processIDs}
-            key={`${username}-${processIDs[username] ?? 0}`}
+            patchSession={patchSessions[username]}
+            key={username}
           />
         ))}
-      </Reorder.Group>
+      </Stack>
     </Box>
   );
 };
@@ -48,43 +43,59 @@ const AccountPanel: React.FC<AccountPanelProps> = ({
 type AccountItemProps = {
   username: string;
   handlePlay: (username: string) => Promise<void>;
+  handleRemoveAccount: (username: string) => Promise<void>;
   processIDs: Record<string, number>;
+  patchSession?: PatchSession;
 };
 
-const AccountItem: React.FC<AccountItemProps> = ({ username, handlePlay, processIDs }) => {
-  const controls = useDragControls();
-  const [isDragging, setIsDragging] = useState(false);
+const AccountItem: React.FC<AccountItemProps> = ({
+  username,
+  handlePlay,
+  handleRemoveAccount,
+  processIDs,
+  patchSession,
+}) => {
+  const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
   const isPlaying = processIDs[username] >= 0;
+  const isUpdating = !!patchSession;
+  const patchFiles = Object.values(patchSession?.files ?? {});
+
+  const confirmRemoveAccount = () => {
+    closeDelete();
+    void handleRemoveAccount(username);
+  };
 
   return (
-    <motion.div whileTap={isDragging ? { scale: 1.01 } : { scale: 1 }}>
-      <Box pb={5}>
-        <Reorder.Item
-          value={username}
-          dragListener={false}
-          dragControls={controls}
-          onDragStart={() => setIsDragging(true)}
-          onDragEnd={() => setIsDragging(false)}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            padding: "0.7rem 1rem",
-            borderRadius: 10,
-            backgroundColor: dreamlandTheme.colors!.dark![9],
-            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.4)",
-          }}
-        >
-          <Box
-            onPointerDown={(e) => controls.start(e)}
-            style={{ cursor: isDragging ? "grabbing" : "grab", marginRight: 12 }}
-          >
-            <IconGripVertical size={20} />
-          </Box>
+    <>
+      <Modal opened={deleteOpened} onClose={closeDelete} title="Delete Account" centered>
+        <Text>Are you sure you want to delete {username}?</Text>
+        <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={closeDelete}>
+            Cancel
+          </Button>
+          <Button color={CatppuccinColors.Red} onClick={confirmRemoveAccount}>
+            Delete
+          </Button>
+        </Group>
+      </Modal>
+      <Box
+        style={{
+          padding: "0.7rem 1rem",
+          borderRadius: 10,
+          backgroundColor: dreamlandTheme.colors!.dark![9],
+          boxShadow: "0 2px 6px rgba(0, 0, 0, 0.4)",
+        }}
+      >
+        <Box style={{ display: "flex", justifyContent: "space-between" }}>
           <Text fw={500} style={{ flex: 1 }} size="lg">
             {username}
           </Text>
           <Group>
-            {isPlaying ? (
+            {isUpdating ? (
+              <Button size="xs" color={CatppuccinColors.Peach} loading>
+                <Text c={CatppuccinColors.Mantle} fw={600}>Updating</Text>
+              </Button>
+            ) : isPlaying ? (
               <Button
                 size="xs"
                 color={CatppuccinColors.Green}
@@ -103,13 +114,48 @@ const AccountItem: React.FC<AccountItemProps> = ({ username, handlePlay, process
                 <Text c={CatppuccinColors.Mantle} fw={600}>Play</Text>
               </Button>
             )}
-            <Button size="xs" color={CatppuccinColors.Red}>
+            <Button size="xs" color={CatppuccinColors.Red} onClick={openDelete}>
               <IconTrash size={"1rem"} color={CatppuccinColors.Mantle} />
             </Button>
           </Group>
-        </Reorder.Item>
+        </Box>
+        <Collapse in={isUpdating}>
+          <Stack gap={6} pt={10} pl={32}>
+            {patchFiles.length === 0 ? (
+              <Text size="xs" c="dimmed">Preparing update…</Text>
+            ) : (
+              patchFiles.map((f) => (
+                <Box key={f.file}>
+                  <Group justify="space-between" gap={4} mb={2} wrap="nowrap">
+                    <Text
+                      size="xs"
+                      c={CatppuccinColors.Subtext0}
+                      style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                    >
+                      {f.file}
+                    </Text>
+                    <Text size="xs" c={CatppuccinColors.Subtext0} style={{ flexShrink: 0 }}>
+                      {f.status === "error"
+                        ? "Failed"
+                        : f.totalBytes > 0
+                          ? `${formatBytes(f.bytesDownloaded)} / ${formatBytes(f.totalBytes)}`
+                          : formatBytes(f.bytesDownloaded)}
+                    </Text>
+                  </Group>
+                  <Progress
+                    value={f.totalBytes > 0 ? Math.min(100, (f.bytesDownloaded / f.totalBytes) * 100) : 100}
+                    color={f.status === "error" ? CatppuccinColors.Red : CatppuccinColors.Blue}
+                    striped={f.status !== "error" && f.totalBytes <= 0}
+                    animated={f.status !== "error" && f.totalBytes <= 0}
+                    size="sm"
+                  />
+                </Box>
+              ))
+            )}
+          </Stack>
+        </Collapse>
       </Box>
-    </motion.div>
+    </>
   );
 };
 

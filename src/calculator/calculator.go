@@ -24,6 +24,9 @@ type Gag struct {
 type GagAttack struct {
 	Gag   Gag
 	IsOrg bool
+	// IsSOS marks a gag as coming from an SOS card. SOS gags always hit —
+	// see IntoCalculateDamage's sosTracks handling.
+	IsSOS bool
 }
 
 type Cog struct {
@@ -36,6 +39,7 @@ type Cog struct {
 type AttackAnalysis struct {
 	Gag         Gag
 	IsOrg       bool
+	IsSOS       bool
 	BaseDamage  float64
 	LureDamage  float64
 	ComboDamage float64
@@ -158,6 +162,15 @@ func multiplyAllDamages(atk *AttackAnalysis, def float64) {
 }
 
 func IntoCalculateDamage(isLured bool, trackEXP int, attacks []AttackAnalysis, cog Cog) []AttackAnalysis {
+	// A gag track becomes guaranteed-hit for this whole attack if any
+	// selected gag in it came from an SOS card.
+	sosTracks := map[string]bool{}
+	for _, a := range attacks {
+		if a.IsSOS {
+			sosTracks[a.Gag.GagType] = true
+		}
+	}
+
 	sort.Slice(attacks, func(i, j int) bool {
 		return gagOrder[attacks[i].Gag.GagType] < gagOrder[attacks[j].Gag.GagType]
 	})
@@ -183,7 +196,7 @@ func IntoCalculateDamage(isLured bool, trackEXP int, attacks []AttackAnalysis, c
 		return gagOrder[attacks[i].Gag.GagType] < gagOrder[attacks[j].Gag.GagType]
 	})
 
-	CalculateDamageRec(&attacks, 0, 0, isLured, trackEXP, tgtDEF, cog, make(map[string]bool))
+	CalculateDamageRec(&attacks, 0, 0, isLured, trackEXP, tgtDEF, cog, make(map[string]bool), sosTracks)
 
 	return attacks
 }
@@ -197,6 +210,7 @@ func CalculateDamageRec(
 	tgtDEF int,
 	cog Cog,
 	seenTracks map[string]bool,
+	sosTracks map[string]bool,
 ) {
 	// Base case
 	if i >= len(*attacks) {
@@ -226,6 +240,8 @@ func CalculateDamageRec(
 	// Calc accuracy
 	var gagAcc float64
 	switch {
+	case sosTracks[a.Gag.GagType]:
+		gagAcc = 100
 	case isLured && a.Gag.GagType == "Drop":
 		gagAcc = 0
 	case isLured || a.Gag.GagType == "Trap":
@@ -263,7 +279,7 @@ func CalculateDamageRec(
 	isLured = (a.Gag.GagType == "Lure" && (prevGag == nil || prevGag.GagType != "Trap")) ||
 		(isLured && nextGag != nil && nextGag.GagType == a.Gag.GagType)
 
-	CalculateDamageRec(attacks, i+1, stun, isLured, trackEXP, tgtDEF, cog, seenTracks)
+	CalculateDamageRec(attacks, i+1, stun, isLured, trackEXP, tgtDEF, cog, seenTracks, sosTracks)
 }
 
 func groupLure(attacks []AttackAnalysis) (*AttackAnalysis, *AttackAnalysis) {

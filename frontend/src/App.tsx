@@ -5,6 +5,7 @@ import { AppShell } from "@mantine/core";
 import {
   GetAllAccounts,
   Login,
+  RemoveAccount,
 } from "../bindings/YATL/services/loginservice.ts";
 import { SidebarItems } from "./components/navbar/NavbarTypes.ts";
 import MultiToonPage from "./modules/multiToon/MultiToonPage.tsx";
@@ -20,6 +21,8 @@ import CogDisguisePage from "./modules/CogSuitPage.tsx";
 import { sanitizeRecord } from "./utils/sanitizeRecord.ts";
 import { GetToonName, GetPortFromPID } from "../bindings/YATL/services/apiservice.ts";
 import FishingPage from "./modules/fishing/FishingPage.tsx";
+import SettingsPage from "./modules/settings/SettingsPage.tsx";
+import { handlePatchEvent, PatchEventPayload } from "./modules/login/logic/patchEvents.ts";
 
 const ComingSoonPage: React.FC<{ title: string }> = ({ title }) => (
   <div>{title} Page (coming soon)</div>
@@ -74,6 +77,15 @@ const App: React.FC = () => {
       yatlDispatch({ type: YATLActionType.REMOVE_PID, pid });
     };
     const unsubscribe = Events.On("common:PID-killed", removePID);
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    const onPatchEvent = (event: { data: PatchEventPayload }) => {
+      if (!event.data?.username) return;
+      handlePatchEvent(event.data, yatlDispatch);
+    };
+    const unsubscribe = Events.On("patch:event", onPatchEvent);
     return unsubscribe;
   }, []);
 
@@ -143,14 +155,31 @@ const bindToonSession = async (pid: number) => {
     })
   };
 
+  const handleAddAccount = (username: string) => {
+    yatlDispatch({ type: YATLActionType.ADD_ACCOUNT, account: username });
+    yatlDispatch({ type: YATLActionType.ADD_PID, username, pid: -1 });
+  };
+
+  const handleRemoveAccount = async (username: string) => {
+    const result = await RemoveAccount(username);
+    if (result === 0) {
+      yatlDispatch({ type: YATLActionType.REMOVE_ACCOUNT, username });
+    } else {
+      console.error(`Failed to remove account ${username}`);
+    }
+  };
+
   const renderPage = (): JSX.Element => {
     switch (selectedPage) {
       case SidebarItems.Launch:
         return (
           <LoginPage
             handlePlay={handlePlay}
+            handleRemoveAccount={handleRemoveAccount}
+            handleAddAccount={handleAddAccount}
             processIDs={yatlState.processIDs}
             accounts={yatlState.accounts}
+            patchSessions={yatlState.patchSessions}
           />
         );
       case SidebarItems.Calculator:
@@ -163,6 +192,7 @@ const bindToonSession = async (pid: number) => {
           AddMTSession={(session: MTSession) => yatlDispatch({ type: YATLActionType.ADD_MT_SESSION, session: session })}
           AddMTProfile={(profile: MTProfile) => yatlDispatch({ type: YATLActionType.ADD_MT_PROFILE, profile: profile })}
           EditMTProfile={(profile: MTProfile) => yatlDispatch({ type: YATLActionType.EDIT_MT_PROFILE, profile: profile })}
+          RemoveMTProfile={(name: string) => yatlDispatch({ type: YATLActionType.REMOVE_MT_PROFILE, name })}
         />;
       case SidebarItems.Suits:
         return <CogDisguisePage
@@ -177,7 +207,7 @@ const bindToonSession = async (pid: number) => {
       case SidebarItems.ResourcePks:
         return <ComingSoonPage title="Resource Packs" />;
       case SidebarItems.Settings:
-        return <ComingSoonPage title="Settings" />;
+        return <SettingsPage />;
       default:
         return <div>Unknown Page</div>;
     }

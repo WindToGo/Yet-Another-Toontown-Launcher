@@ -43,11 +43,20 @@ func GetPasswordFromUsername(username string) (string, error) {
 	return pass, nil
 }
 
-// TODO: Remove account from json alonside keyring
 func RemoveAccount(username string) error {
 	err := keyring.Delete(service, username)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to delete user from keyring")
+		return err
+	}
+
+	accounts := GetAllAccounts()
+	accounts = slices.DeleteFunc(accounts, func(a string) bool { return a == username })
+
+	viper.Set("accounts", accounts)
+	err = viper.WriteConfig()
+	if err != nil {
+		log.Error().Err(err).Msg("Viper failed to write to config file")
 		return err
 	}
 	return nil

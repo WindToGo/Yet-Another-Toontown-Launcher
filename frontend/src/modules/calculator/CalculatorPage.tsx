@@ -4,6 +4,7 @@ import CogStatusMenu from "./components/CogStatusMenu.tsx";
 import { Box, Button, Drawer, Grid, Group, Image, Slider, Stack, Switch, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import GagMenu from "./components/GagMenu.tsx";
+import SOSMenu from "./components/SOSMenu.tsx";
 import { CatppuccinColors } from "../../themes/CatppuccinMocha.ts";
 import CogHealthBar from "./components/cogHealthBar.tsx";
 import AccuracyBar from "./components/AccuracyBar.tsx";
@@ -16,6 +17,7 @@ import { IconQuestionMark } from "@tabler/icons-react";
 
 const Calculator: React.FC = () => {
   const [opened, { open, close }] = useDisclosure(false);
+  const [showSOSMenu, setShowSOSMenu] = useState<boolean>(false);
   const [analyzedAttacks, setAnalyzedAttacks] = useState<Array<AttackAnalysis>>([]);
   const [tempDamage, setTempDamage] = useState<number>(0);
   const [tempAccuracy, setTempAccuracy] = useState<number>(0);
@@ -69,13 +71,35 @@ const Calculator: React.FC = () => {
         cogHealthModifier={cogHealthModifier}
         tempDamage={tempDamage}
       />
-      <Box p='md'>
-        <GagMenu
-          onSelectedGags={(gag: GagAttack) => calcDispatch({ type: CalcActionType.ADD_GAG, gag })}
-          handlegagMenuHover={handleGagMenuHover}
-          handlegagMenuHoverEnd={handlegagMenuHoverEnd}
-          isLured={calcState.isLured}
-        />
+      <Box p='md' style={{ display: 'grid' }}>
+        <Box
+          style={{
+            gridArea: '1 / 1',
+            visibility: showSOSMenu ? 'hidden' : 'visible',
+            pointerEvents: showSOSMenu ? 'none' : 'auto',
+          }}
+        >
+          <GagMenu
+            onSelectedGags={(gag: GagAttack) => calcDispatch({ type: CalcActionType.ADD_GAG, gag })}
+            handlegagMenuHover={handleGagMenuHover}
+            handlegagMenuHoverEnd={handlegagMenuHoverEnd}
+            isLured={calcState.isLured}
+          />
+        </Box>
+        <Box
+          style={{
+            gridArea: '1 / 1',
+            visibility: showSOSMenu ? 'visible' : 'hidden',
+            pointerEvents: showSOSMenu ? 'auto' : 'none',
+          }}
+        >
+          <SOSMenu
+            onSelectedGags={(gag: GagAttack) => calcDispatch({ type: CalcActionType.ADD_GAG, gag })}
+            handlegagMenuHover={handleGagMenuHover}
+            handlegagMenuHoverEnd={handlegagMenuHoverEnd}
+            isLured={calcState.isLured}
+          />
+        </Box>
       </Box>
 
       <Grid
@@ -115,7 +139,7 @@ const Calculator: React.FC = () => {
         })}
       </Grid>
 
-      <Group justify="center">
+      <Group justify="center" mb="lg">
         <Button variant="default"
           onClick={open}
           onContextMenu={(e) => e.preventDefault()}
@@ -123,7 +147,8 @@ const Calculator: React.FC = () => {
         >
           Cog Settings
         </Button>
-        <Button variant="default"
+        <Button variant={showSOSMenu ? "filled" : "default"}
+          onClick={() => setShowSOSMenu((prev) => !prev)}
           onContextMenu={(e) => e.preventDefault()}
           m='sm'
         >

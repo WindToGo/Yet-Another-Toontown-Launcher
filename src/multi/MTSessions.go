@@ -54,6 +54,14 @@ func SaveMTProfile(profileName string, profile MTProfile) error {
 	return viper.WriteConfig()
 }
 
+func RemoveMTProfile(profileName string) error {
+	profiles := viper.GetStringMap("mtProfiles")
+	delete(profiles, profileName)
+	viper.Set("mtProfiles", profiles)
+
+	return viper.WriteConfig()
+}
+
 func LoadMTProfile(profileName string) MTProfile {
 	raw := viper.Get("mtProfiles." + profileName)
 	if raw == nil {

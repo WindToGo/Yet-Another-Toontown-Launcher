@@ -53,7 +53,7 @@ func HandleLogin(username string) int {
 
 	switch resp.Success {
 	case "true": // Full Seccess -> Get tokens and Download patch manifest
-		return handleLoginSuccess(resp)
+		return handleLoginSuccess(username, resp)
 
 	case "delayed": // In Queue -> Poll until full success
 		_ = resp.QueueToken
@@ -71,29 +71,34 @@ func HandleLogin(username string) int {
 }
 
 func loginTTR(username string, password string) (*TTRResponse, error) {
-	// Create form to send
 	form := url.Values{}
 	form.Set("username", username)
 	form.Set("password", password)
 
-	// Create POST Request
+	return submitLoginForm(form)
+}
+
+// submitLoginForm posts a login (or Toonguard resubmission) form to TTR and
+// parses the response.
+func submitLoginForm(form url.Values) (*TTRResponse, error) {
 	req, err := http.NewRequest(http.MethodPost, loginURL, bytes.NewBufferString(form.Encode()))
-
-	// Add required Header
-	req.Header.Set("Content-type", "application/x-www-form-urlencoded")
-
-	// Send request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-
 	if err != nil {
 		return nil, err
 	}
 
+	req.Header.Set("Content-type", "application/x-www-form-urlencoded")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 
-	// Gather & return response
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	var ttrResp TTRResponse
 	if err := json.Unmarshal(body, &ttrResp); err != nil {
@@ -103,21 +108,65 @@ func loginTTR(username string, password string) (*TTRResponse, error) {
 	return &ttrResp, nil
 }
 
-func TestLoginTTRSuccess(username string, password string) (bool, error) {
-	ttrResp, err := loginTTR(username, password)
+// LoginAttempt is the result of checking a username/password (or Toonguard
+// code) against TTR, in a form the frontend can act on directly.
+type LoginAttempt struct {
+	Success           bool   `json:"success"`
+	RequiresToonguard bool   `json:"requiresToonguard"`
+	ResponseToken     string `json:"responseToken,omitempty"`
+	Message           string `json:"message,omitempty"`
+}
+
+// AttemptLogin verifies a username/password against TTR without launching
+// the game, and reports whether a Toonguard code is required to proceed.
+func AttemptLogin(username string, password string) (*LoginAttempt, error) {
+	resp, err := loginTTR(username, password)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
+	return interpretLoginResponse(resp), nil
+}
 
-	if ttrResp.Success == "false" {
-		return false, nil
+// SubmitToonguard resubmits a login using the code emailed to the player
+// alongside the responseToken returned from the initial partial response.
+func SubmitToonguard(username string, responseToken string, code string) (*LoginAttempt, error) {
+	form := url.Values{}
+	form.Set("username", username)
+	form.Set("appToken", code)
+	form.Set("authToken", responseToken)
+
+	resp, err := submitLoginForm(form)
+	if err != nil {
+		return nil, err
 	}
+	return interpretLoginResponse(resp), nil
+}
 
-	return true, nil
+func interpretLoginResponse(resp *TTRResponse) *LoginAttempt {
+	switch resp.Success {
+	case "true":
+		return &LoginAttempt{Success: true}
+	case "partial":
+		return &LoginAttempt{RequiresToonguard: true, ResponseToken: resp.ResponseToken, Message: resp.Banner}
+	case "false":
+		return &LoginAttempt{Message: resp.Banner}
+	case "delayed":
+		// TODO: Add queue support
+		return &LoginAttempt{Message: "Login is currently queued, please try again shortly."}
+	default:
+		return &LoginAttempt{Message: "Unexpected response from Toontown Rewritten."}
+	}
 }
 
 
-func handleLoginSuccess(resp *TTRResponse) int {
+// patchEventPayload is what the frontend receives over the "patch:event"
+// Wails event — a patcher.PatchEvent scoped to the account it's for.
+type patchEventPayload struct {
+	Username string `json:"username"`
+	patcher.PatchEvent
+}
+
+func handleLoginSuccess(username string, resp *TTRResponse) int {
 	// Prepare mirrors for download & patching
 	mirrorResp, err := http.Get(TTRMirrors)
 	if err != nil {
@@ -156,13 +205,18 @@ func handleLoginSuccess(resp *TTRResponse) int {
 
 	// statusLabel.SetText("Downloading and Verifying files...")
 
+	app := application.Get()
+	onProgress := func(event patcher.PatchEvent) {
+		app.Event.Emit("patch:event", patchEventPayload{Username: username, PatchEvent: event})
+	}
+
 	// Download and install ttr in a seperate goroutine
 	done := make(chan error, 1)
 	pidChan := make(chan int)
 	errChan := make(chan error)
 
 	go func() {
-		err := patcher.DownloadAndInstallManifestFiles(mirror, []byte(manifestContent))
+		err := patcher.DownloadAndInstallManifestFiles(mirror, []byte(manifestContent), onProgress)
 		done <- err
 	}()
 

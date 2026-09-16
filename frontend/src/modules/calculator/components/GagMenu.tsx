@@ -49,10 +49,10 @@ const GagMenu: React.FC<GagMenuProps> = ({ onSelectedGags, handlegagMenuHoverEnd
                     disabled={disabled}
                     onContextMenu={(e) => {
                       e.preventDefault()
-                      onSelectedGags({ Gag: gags[i + 7], IsOrg: true })
+                      onSelectedGags({ Gag: gags[i + 7], IsOrg: true, IsSOS: false })
                     }}
-                    onClick={() => !disabled && onSelectedGags({ Gag: gags[i + 7], IsOrg: false })}
-                    onMouseEnter={() => !disabled && handlegagMenuHover({ Gag: gag, IsOrg: false })}
+                    onClick={() => !disabled && onSelectedGags({ Gag: gags[i + 7], IsOrg: false, IsSOS: false })}
+                    onMouseEnter={() => !disabled && handlegagMenuHover({ Gag: gag, IsOrg: false, IsSOS: false })}
                     onMouseLeave={handlegagMenuHoverEnd}
                     style={{
                       borderWidth: 0,

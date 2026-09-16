@@ -13,18 +13,12 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"slices"
 
-	"fyne.io/fyne/v2/widget"
 	"github.com/rs/zerolog/log"
 )
-
-type DownloadStatus struct {
-	Label   *widget.Label
-	Bar     *widget.ProgressBar
-	Current string
-}
 
 type PatchInfo struct {
 	DL       string            `json:"dl"`
@@ -35,6 +29,72 @@ type PatchInfo struct {
 }
 
 type PatchManifest map[string]PatchInfo
+
+// PatchEventType identifies what a PatchEvent is reporting.
+type PatchEventType string
+
+const (
+	// PatchEventStarted fires once, after we know how many files need
+	// downloading (files already up to date are never included).
+	PatchEventStarted PatchEventType = "started"
+	// PatchEventFileProgress fires repeatedly per file as bytes come in.
+	PatchEventFileProgress PatchEventType = "file-progress"
+	// PatchEventFileComplete fires once a file has downloaded successfully.
+	PatchEventFileComplete PatchEventType = "file-complete"
+	// PatchEventFileError fires if a single file fails to download.
+	PatchEventFileError PatchEventType = "file-error"
+	// PatchEventComplete fires once the whole update finished successfully
+	// (including when there was nothing to download).
+	PatchEventComplete PatchEventType = "complete"
+	// PatchEventError fires if the update fails as a whole (a download,
+	// decompression, or install step failed).
+	PatchEventError PatchEventType = "error"
+)
+
+// PatchEvent reports the progress of DownloadAndInstallManifestFiles so a
+// caller can surface live status to the user.
+type PatchEvent struct {
+	Type            PatchEventType `json:"type"`
+	File            string         `json:"file,omitempty"`
+	BytesDownloaded int64          `json:"bytesDownloaded,omitempty"`
+	TotalBytes      int64          `json:"totalBytes,omitempty"`
+	TotalFiles      int            `json:"totalFiles,omitempty"`
+	Message         string         `json:"message,omitempty"`
+}
+
+// ProgressFunc receives patch progress events. Implementations must be safe
+// to call from multiple goroutines concurrently.
+type ProgressFunc func(PatchEvent)
+
+// progressWriter is an io.Writer that reports bytes written to onProgress,
+// throttled so a fast local connection doesn't flood the event channel.
+type progressWriter struct {
+	file       string
+	total      int64
+	downloaded int64
+	onProgress ProgressFunc
+	lastReport time.Time
+}
+
+const progressReportInterval = 150 * time.Millisecond
+
+func (pw *progressWriter) Write(p []byte) (int, error) {
+	n := len(p)
+	pw.downloaded += int64(n)
+
+	now := time.Now()
+	if now.Sub(pw.lastReport) >= progressReportInterval {
+		pw.lastReport = now
+		pw.onProgress(PatchEvent{
+			Type:            PatchEventFileProgress,
+			File:            pw.file,
+			BytesDownloaded: pw.downloaded,
+			TotalBytes:      pw.total,
+		})
+	}
+
+	return n, nil
+}
 
 // Manifest Query
 
@@ -74,7 +134,7 @@ func getPlatformString() string {
 
 // Downloads & Decompression
 
-func downloadFile(baseURL string, filename string, info PatchInfo, tempPath string) error {
+func downloadFile(baseURL string, filename string, info PatchInfo, tempPath string, onProgress ProgressFunc) error {
 	url := fmt.Sprintf("%s/%s", baseURL, info.DL)
 	fmt.Println("Downloading ", filename, " from ", url)
 
@@ -92,8 +152,13 @@ func downloadFile(baseURL string, filename string, info PatchInfo, tempPath stri
 	}
 	defer out.Close()
 
-	// Copy data to blank file
-	_, err = io.Copy(out, resp.Body)
+	// resp.ContentLength is -1 when the server didn't send one (e.g.
+	// chunked encoding); the frontend treats that as "unknown total".
+	pw := &progressWriter{file: filename, total: resp.ContentLength, onProgress: onProgress}
+	onProgress(PatchEvent{Type: PatchEventFileProgress, File: filename, TotalBytes: resp.ContentLength})
+
+	// Copy data to blank file, reporting progress as it streams in
+	_, err = io.Copy(out, io.TeeReader(resp.Body, pw))
 	if err != nil {
 		return fmt.Errorf("error copying data to file: %w", err)
 	}
@@ -160,7 +225,19 @@ func isFileInstalled(filename string, checkSum string) (bool, error) {
 	return match, nil
 }
 
-func DownloadAndInstallManifestFiles(baseURL string, rawManifest []byte) error {
+// pendingPatch is a manifest entry that has been confirmed to need
+// downloading (wrong OS and already-installed entries are filtered out
+// before this point).
+type pendingPatch struct {
+	name string
+	info PatchInfo
+}
+
+func DownloadAndInstallManifestFiles(baseURL string, rawManifest []byte, onProgress ProgressFunc) error {
+	if onProgress == nil {
+		onProgress = func(PatchEvent) {}
+	}
+
 	// Create tempFS for work
 	tempDir := generateTempDir()
 	if tempDir == nil {
@@ -172,18 +249,15 @@ func DownloadAndInstallManifestFiles(baseURL string, rawManifest []byte) error {
 	patchManifest := parseManifest(rawManifest)
 	platform := getPlatformString()
 
-	// Only dispatch downloads for required files
-	filesToInstall := map[string]string{}
-	var downloadErrs []string
-	var wg sync.WaitGroup
+	// Determine which files actually need downloading before reporting
+	// anything, so the caller knows the real total up front.
+	var pending []pendingPatch
 	for patch, info := range patchManifest {
-		// Skip if not for OS
 		if !isPatchForOS(info.Only, platform) {
 			log.Info().Str("File", patch).Msg("Skipping file")
 			continue
 		}
 
-		// Skip if hash matches already-installed file
 		checkSumMatch, err := isFileInstalled(patch, info.Hash)
 		if err != nil {
 			// Expected on first install or when the file is genuinely absent.
@@ -198,28 +272,66 @@ func DownloadAndInstallManifestFiles(baseURL string, rawManifest []byte) error {
 			continue
 		}
 
-		wg.Add(1)
-		err = downloadFile(baseURL, patch, info, filepath.Join(*tempDir, patch))
-		wg.Done()
-		if err != nil {
-			log.Error().Str("BaseURL", baseURL).
-				Str("File", patch).
-				Str("Patch URL", info.DL).
-				Err(err).
-				Msg("Failed to download file")
-			// TODO: Retry download
-			downloadErrs = append(downloadErrs, patch)
-			continue
-		}
-
-		filesToInstall[patch] = patch
+		pending = append(pending, pendingPatch{name: patch, info: info})
 	}
 
+	if len(pending) == 0 {
+		onProgress(PatchEvent{Type: PatchEventComplete})
+		return nil
+	}
+
+	onProgress(PatchEvent{Type: PatchEventStarted, TotalFiles: len(pending)})
+
+	// Download up to maxConcurrentDownloads files at once. wg.Wait() below
+	// still blocks until every dispatched download has finished before we
+	// touch the results.
+	const maxConcurrentDownloads = 6
+
+	filesToInstall := map[string]string{}
+	var downloadErrs []string
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, maxConcurrentDownloads)
+
+	for _, p := range pending {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			err := downloadFile(baseURL, p.name, p.info, filepath.Join(*tempDir, p.name), onProgress)
+
+			mu.Lock()
+			defer mu.Unlock()
+
+			if err != nil {
+				log.Error().Str("BaseURL", baseURL).
+					Str("File", p.name).
+					Str("Patch URL", p.info.DL).
+					Err(err).
+					Msg("Failed to download file")
+				// TODO: Retry download
+				downloadErrs = append(downloadErrs, p.name)
+				onProgress(PatchEvent{Type: PatchEventFileError, File: p.name, Message: err.Error()})
+				return
+			}
+
+			filesToInstall[p.name] = p.name
+			onProgress(PatchEvent{Type: PatchEventFileComplete, File: p.name})
+		}()
+	}
+
+	// Every download must finish — success or failure — before we decide
+	// whether it's safe to install and launch.
 	wg.Wait()
 
 	// Block launch if any download failed — don't install a partial update.
 	if len(downloadErrs) > 0 {
-		return fmt.Errorf("failed to download %d file(s): %s", len(downloadErrs), strings.Join(downloadErrs, ", "))
+		message := fmt.Sprintf("failed to download %d file(s): %s", len(downloadErrs), strings.Join(downloadErrs, ", "))
+		onProgress(PatchEvent{Type: PatchEventError, Message: message})
+		return fmt.Errorf("%s", message)
 	}
 
 	log.Info().Msg("Downloads complete")
@@ -256,14 +368,18 @@ func DownloadAndInstallManifestFiles(baseURL string, rawManifest []byte) error {
 
 	// Block launch if decompression failed for any file.
 	if len(decompErrs) > 0 {
-		return fmt.Errorf("failed to decompress %d file(s): %s", len(decompErrs), strings.Join(decompErrs, ", "))
+		message := fmt.Sprintf("failed to decompress %d file(s): %s", len(decompErrs), strings.Join(decompErrs, ", "))
+		onProgress(PatchEvent{Type: PatchEventError, Message: message})
+		return fmt.Errorf("%s", message)
 	}
 
 	err := installTTR(*tempDir, filesToInstall)
 	if err != nil {
+		onProgress(PatchEvent{Type: PatchEventError, Message: err.Error()})
 		return fmt.Errorf("failed to install TTR: %w", err)
 	}
 
+	onProgress(PatchEvent{Type: PatchEventComplete})
 	return nil
 }
 

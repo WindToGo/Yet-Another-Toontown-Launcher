@@ -8,6 +8,7 @@ export interface Status {
 export interface GagAttack {
   Gag: Gag
   IsOrg: boolean
+  IsSOS: boolean
 }
 
 export interface Gag {
@@ -47,6 +48,15 @@ export interface GagMenuProps {
   handlegagMenuHoverEnd: () => void;
   handlegagMenuHover: (gag: GagAttack) => void;
   isLured: boolean;
+}
+
+export interface SOSToon {
+  name: string;
+  tier: number;
+  type: string;
+  gag: string;
+  damage: number;
+  img: string;
 }
 
 export interface AccuracyBarProps {

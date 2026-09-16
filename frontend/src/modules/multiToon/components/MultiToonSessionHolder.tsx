@@ -5,7 +5,7 @@ import KeybindButtons from "./keybindButtons"
 import { useDisclosure } from "@mantine/hooks"
 import dreamlandTheme from "../../../themes/DreamlandTheme"
 import { CatppuccinColors } from "../../../themes/CatppuccinMocha"
-import { createSessionWithClick } from "../logic/multiUtils"
+import { createSessionWithClick, removeProfile } from "../logic/multiUtils"
 import { notifications } from "@mantine/notifications"
 import AttatchMenu from "./attatchMenu"
 
@@ -14,12 +14,14 @@ export type MultiToonSessionHolderProps = {
   yatlSessions: MTSession[];
   accounts: string[];
   EditMTProfile: (profile: MTProfile) => void;
+  RemoveMTProfile: (name: string) => void;
   addMTSession: (session: MTSession) => void;
 }
 
-const MultiToonSessionHolder: React.FC<MultiToonSessionHolderProps> = ({ profile, EditMTProfile, addMTSession, yatlSessions, accounts }: MultiToonSessionHolderProps) => {
+const MultiToonSessionHolder: React.FC<MultiToonSessionHolderProps> = ({ profile, EditMTProfile, RemoveMTProfile, addMTSession, yatlSessions, accounts }: MultiToonSessionHolderProps) => {
   const [opened, { open, close }] = useDisclosure(false);
   const [attatchedModalOpened, attatchedModal] = useDisclosure(false);
+  const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
   const sessions = yatlSessions;
   var connectedSessions = 0;
   const isSessionConnected = sessions.some((session) => {
@@ -39,6 +41,12 @@ const MultiToonSessionHolder: React.FC<MultiToonSessionHolderProps> = ({ profile
       title: `Created New MultiToon Session ${session.mt_session}`,
       message: `On Profile ${profile.name} for window ${session.window}`
     })
+  }
+
+  const confirmRemoveProfile = async () => {
+    closeDelete();
+    const success = await removeProfile(profile.name);
+    if (success) RemoveMTProfile(profile.name);
   }
 
   return (
@@ -89,6 +97,7 @@ const MultiToonSessionHolder: React.FC<MultiToonSessionHolderProps> = ({ profile
           <Button
             size="xs"
             color={CatppuccinColors.Red}
+            onClick={openDelete}
           >
             <IconTrash size={"1rem"} color={CatppuccinColors.Mantle} />
           </Button>
@@ -99,6 +108,17 @@ const MultiToonSessionHolder: React.FC<MultiToonSessionHolderProps> = ({ profile
       </Modal>
       <Modal size={'lg'} opened={attatchedModalOpened} onClose={attatchedModal.close} title={`Attatching Profile: ${profile.name}`}>
         <AttatchMenu accounts={accounts} EditMTProfile={EditMTProfile} profile={profile}/>
+      </Modal>
+      <Modal opened={deleteOpened} onClose={closeDelete} title="Delete Profile" centered>
+        <Text>Are you sure you want to delete {profile.name}?</Text>
+        <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={closeDelete}>
+            Cancel
+          </Button>
+          <Button color={CatppuccinColors.Red} onClick={confirmRemoveProfile}>
+            Delete
+          </Button>
+        </Group>
       </Modal>
     </>
   )

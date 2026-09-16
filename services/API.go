@@ -61,3 +61,9 @@ func (g *APIService) GetFishData(port int) ([]byte, error) {
 
 	return data, nil
 }
+
+// GetPopulation returns TTR's current server population. Cached on the Go
+// side (see src/ttrAPI/population.go) so this is safe to call often.
+func (g *APIService) GetPopulation() (*ttrapi.Population, error) {
+	return ttrapi.GetPopulation()
+}

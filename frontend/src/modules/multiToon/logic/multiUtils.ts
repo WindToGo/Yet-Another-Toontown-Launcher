@@ -1,5 +1,5 @@
 import { notifications } from "@mantine/notifications";
-import { LoadTTRControls, Mt_init, Mt_select_window, Mt_set_key_down, Mt_set_key_up, SaveMTProfile } from "../../../../bindings/YATL/services/multiservice";
+import { LoadTTRControls, Mt_init, Mt_select_window, Mt_set_key_down, Mt_set_key_up, RemoveMTProfile, SaveMTProfile } from "../../../../bindings/YATL/services/multiservice";
 import { MTProfile, MTSession } from "./MultiToonTypes";
 import { sanitizeRecord } from "../../../utils/sanitizeRecord";
 
@@ -50,6 +50,17 @@ export async function saveProfiles(profiles: MTProfile[]): Promise<void> {
 export async function saveProfile(profile: MTProfile): Promise<void> {
   await SaveMTProfile(profile.name, {KeyMap: profile.keyMap, Name: profile.name, AutoAttatchAccounts: profile.autoAttatchAccounts})
   notifications.show({ title: `Saving Profile ${profile.name}`, message: `to YATL config` })
+}
+
+// Removes a profile from the YATL config. Returns true on success.
+export async function removeProfile(name: string): Promise<boolean> {
+  const result = await RemoveMTProfile(name);
+  if (result !== 0) {
+    notifications.show({ color: "red", title: "Failed to Delete Profile", message: name });
+    return false;
+  }
+  notifications.show({ title: "Deleted Profile", message: name });
+  return true;
 }
 
 export async function setKeyDown(key: string, session: MTSession): Promise<void> {

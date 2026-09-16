@@ -63,7 +63,7 @@ export default function calcReducer(state: CalcState, action: CalcAction): CalcS
     }
     case CalcActionType.REMOVE_GAG: {
       const index = state.selectedGags.findIndex(
-        g => g.Gag.GagName === action.gag.Gag.GagName && g.IsOrg === action.gag.IsOrg
+        g => g.Gag.GagName === action.gag.Gag.GagName && g.IsOrg === action.gag.IsOrg && g.IsSOS === action.gag.IsSOS
       );
       if (index === -1) return state; // no change if gag not found
 

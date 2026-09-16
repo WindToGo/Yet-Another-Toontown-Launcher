@@ -8,7 +8,7 @@ import { FloatingButton } from "../../components/buttons";
 import { newProfile, saveProfiles } from "./logic/multiUtils";
 import { notifications } from "@mantine/notifications";
 
-const MultiToonPage: React.FC<MultiToonPageProps> = ({ MTSessions, AddMTSession, AddMTProfile, yatlProfiles, EditMTProfile, accounts }: MultiToonPageProps) => {
+const MultiToonPage: React.FC<MultiToonPageProps> = ({ MTSessions, AddMTSession, AddMTProfile, yatlProfiles, EditMTProfile, RemoveMTProfile, accounts }: MultiToonPageProps) => {
   const [opened, { open, close }] = useDisclosure(false);
   const [profileName, setProfilename] = useState<string>("");
   const profiles = yatlProfiles
@@ -54,6 +54,7 @@ const MultiToonPage: React.FC<MultiToonPageProps> = ({ MTSessions, AddMTSession,
             <MultiToonSessionHolder
               profile={profile}
               EditMTProfile={EditMTProfile}
+              RemoveMTProfile={RemoveMTProfile}
               addMTSession={AddMTSession}
               yatlSessions={MTSessions}
               accounts={accounts}

@@ -55,6 +55,16 @@ func (g *MultiService) SaveMTProfile(name string, profile multi.MTProfile) {
 	multi.SaveMTProfile(name, profile)
 }
 
+// Returns 0 on success
+func (g *MultiService) RemoveMTProfile(name string) int {
+	err := multi.RemoveMTProfile(name)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to remove MultiToon profile")
+		return 1
+	}
+	return 0
+}
+
 func (g *MultiService) LoadTTRControls() map[string]string {
 	controls, err := multi.LoadTTRControls()
 	if err != nil {

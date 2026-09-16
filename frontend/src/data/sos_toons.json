@@ -1,0 +1,98 @@
+[
+  {
+    "name": "Clerk Will",
+    "tier": 3,
+    "type": "Trap",
+    "gag": "Quicksand",
+    "damage": 60,
+    "img": "sos_cards/Clerk_Will.png"
+  },
+  {
+    "name": "Clerk Penny",
+    "tier": 4,
+    "type": "Trap",
+    "gag": "Trapdoor",
+    "damage": 120,
+    "img": "sos_cards/Clerk_Penny.png"
+  },
+  {
+    "name": "Clerk Clara",
+    "tier": 5,
+    "type": "Trap",
+    "gag": "TNT",
+    "damage": 180,
+    "img": "sos_cards/Clerk_Clara.png"
+  },
+  {
+    "name": "Stinky Ned",
+    "tier": 3,
+    "type": "Lure",
+    "gag": "Small Magnet",
+    "damage": 4,
+    "img": "sos_cards/Stinky_Ned.png"
+  },
+  {
+    "name": "Nancy Gas",
+    "tier": 4,
+    "type": "Lure",
+    "gag": "Big Magnet",
+    "damage": 5,
+    "img": "sos_cards/Nancy_Gas.png"
+  },
+  {
+    "name": "Lil Oldman",
+    "tier": 5,
+    "type": "Lure",
+    "gag": "Hypno-goggles",
+    "damage": 6,
+    "img": "sos_cards/All_Lure_SOS.png"
+  },
+  {
+    "name": "Barbara Seville",
+    "tier": 3,
+    "type": "Sound",
+    "gag": "Aoogah",
+    "damage": 35,
+    "img": "sos_cards/Barbara_Seville.png"
+  },
+  {
+    "name": "Sid Sonata",
+    "tier": 4,
+    "type": "Sound",
+    "gag": "Elephant Trunk",
+    "damage": 55,
+    "img": "sos_cards/Sid_Sonata.png"
+  },
+  {
+    "name": "Moe Zart",
+    "tier": 5,
+    "type": "Sound",
+    "gag": "Foghorn",
+    "damage": 75,
+    "img": "sos_cards/Moe_Zart.png"
+  },
+  {
+    "name": "Clumsy Ned",
+    "tier": 3,
+    "type": "Drop",
+    "gag": "Big Weight",
+    "damage": 60,
+    "img": "sos_cards/Clumsy_Ned.png"
+  },
+  {
+    "name": "Franz Neckvein",
+    "tier": 4,
+    "type": "Drop",
+    "gag": "Safe",
+    "damage": 100,
+    "img": "sos_cards/Franz_Neckvein.png"
+  },
+  {
+    "name": "Barnacle Bessie",
+    "tier": 5,
+    "type": "Drop",
+    "gag": "Grand Piano",
+    "damage": 170,
+    "img": "sos_cards/Barnacle_Bessie.png"
+  }
+]

@@ -6,17 +6,31 @@ export type ToonSession = {
   pid: number;
 };
 
+export type PatchFileState = {
+  file: string;
+  bytesDownloaded: number;
+  totalBytes: number; // <= 0 means unknown
+  status: "downloading" | "error";
+};
+
+export type PatchSession = {
+  totalFiles: number;
+  files: Record<string, PatchFileState>;
+};
+
 export type YATLState = {
   accounts: string[];
   MTSessions: MTSession[];
   processIDs: Record<string, number>;
   MTProfiles: MTProfile[];
   toonSessions: ToonSession[]; // active in-game toons, port → toon name, no username tie
+  patchSessions: Record<string, PatchSession>; // username → in-progress update, absent when not updating
 }
 
 export enum YATLActionType {
   SET_ACCOUNTS = "SET_ACCOUNTS",
   ADD_ACCOUNT = "ADD_ACCOUNT",
+  REMOVE_ACCOUNT = "REMOVE_ACCOUNT",
   ADD_PID = "ADD_PID",
   REMOVE_PID = "REMOVE_PID",
   SET_TOON_SESSIONS = "SET_TOON_SESSIONS",
@@ -27,11 +41,17 @@ export enum YATLActionType {
   EDIT_MT_PROFILE = "EDIT_MT_PROFILE",
   ADD_MT_PROFILE = "ADD_MT_PROFILE",
   REMOVE_MT_PROFILE = "REMOVE_MY_PROFILE",
+  PATCH_STARTED = "PATCH_STARTED",
+  PATCH_FILE_PROGRESS = "PATCH_FILE_PROGRESS",
+  PATCH_FILE_COMPLETE = "PATCH_FILE_COMPLETE",
+  PATCH_FILE_ERROR = "PATCH_FILE_ERROR",
+  PATCH_SESSION_ENDED = "PATCH_SESSION_ENDED",
 }
 
-type YATLAction =
+export type YATLAction =
   | { type: YATLActionType.SET_ACCOUNTS; accounts: string[] }
   | { type: YATLActionType.ADD_ACCOUNT; account: string }
+  | { type: YATLActionType.REMOVE_ACCOUNT; username: string }
   | { type: YATLActionType.ADD_PID; username: string; pid: number }
   | { type: YATLActionType.REMOVE_PID; pid: number }
   | { type: YATLActionType.SET_TOON_SESSIONS; sessions: ToonSession[] }
@@ -42,6 +62,17 @@ type YATLAction =
   | { type: YATLActionType.EDIT_MT_PROFILE; profile: MTProfile }
   | { type: YATLActionType.REMOVE_MT_PROFILE; name: string }
   | { type: YATLActionType.ADD_MT_PROFILE; profile: MTProfile }
+  | { type: YATLActionType.PATCH_STARTED; username: string; totalFiles: number }
+  | {
+      type: YATLActionType.PATCH_FILE_PROGRESS;
+      username: string;
+      file: string;
+      bytesDownloaded: number;
+      totalBytes: number;
+    }
+  | { type: YATLActionType.PATCH_FILE_COMPLETE; username: string; file: string }
+  | { type: YATLActionType.PATCH_FILE_ERROR; username: string; file: string }
+  | { type: YATLActionType.PATCH_SESSION_ENDED; username: string }
 
 export const initialYatlState: YATLState = {
   accounts: [],
@@ -49,6 +80,7 @@ export const initialYatlState: YATLState = {
   processIDs: {},
   MTProfiles: [],
   toonSessions: [],
+  patchSessions: {},
 };
 
 export default function YATLReducer(state: YATLState, action: YATLAction): YATLState {
@@ -58,6 +90,18 @@ export default function YATLReducer(state: YATLState, action: YATLAction): YATLS
     }
     case YATLActionType.ADD_ACCOUNT: {
       return { ...state, accounts: [...state.accounts, action.account] };
+    }
+    case YATLActionType.REMOVE_ACCOUNT: {
+      const updatedProcessIDs = { ...state.processIDs };
+      delete updatedProcessIDs[action.username];
+      const updatedPatchSessions = { ...state.patchSessions };
+      delete updatedPatchSessions[action.username];
+      return {
+        ...state,
+        accounts: state.accounts.filter((username) => username !== action.username),
+        processIDs: updatedProcessIDs,
+        patchSessions: updatedPatchSessions,
+      };
     }
     case YATLActionType.ADD_PID: {
       return {
@@ -134,6 +178,69 @@ export default function YATLReducer(state: YATLState, action: YATLAction): YATLS
         MTProfiles: state.MTProfiles.filter(p => p.name !== action.name),
         MTSessions: state.MTSessions.filter(s => s.profile.name !== action.name),
       };
+    }
+    case YATLActionType.PATCH_STARTED: {
+      return {
+        ...state,
+        patchSessions: {
+          ...state.patchSessions,
+          [action.username]: { totalFiles: action.totalFiles, files: {} },
+        },
+      };
+    }
+    case YATLActionType.PATCH_FILE_PROGRESS: {
+      const session = state.patchSessions[action.username];
+      if (!session) return state;
+      return {
+        ...state,
+        patchSessions: {
+          ...state.patchSessions,
+          [action.username]: {
+            ...session,
+            files: {
+              ...session.files,
+              [action.file]: {
+                file: action.file,
+                bytesDownloaded: action.bytesDownloaded,
+                totalBytes: action.totalBytes,
+                status: "downloading",
+              },
+            },
+          },
+        },
+      };
+    }
+    case YATLActionType.PATCH_FILE_COMPLETE: {
+      const session = state.patchSessions[action.username];
+      if (!session) return state;
+      const files = { ...session.files };
+      delete files[action.file];
+      return {
+        ...state,
+        patchSessions: { ...state.patchSessions, [action.username]: { ...session, files } },
+      };
+    }
+    case YATLActionType.PATCH_FILE_ERROR: {
+      const session = state.patchSessions[action.username];
+      if (!session) return state;
+      return {
+        ...state,
+        patchSessions: {
+          ...state.patchSessions,
+          [action.username]: {
+            ...session,
+            files: {
+              ...session.files,
+              [action.file]: { file: action.file, bytesDownloaded: 0, totalBytes: 0, status: "error" },
+            },
+          },
+        },
+      };
+    }
+    case YATLActionType.PATCH_SESSION_ENDED: {
+      const updatedPatchSessions = { ...state.patchSessions };
+      delete updatedPatchSessions[action.username];
+      return { ...state, patchSessions: updatedPatchSessions };
     }
     default:
       return state;
